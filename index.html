@@ -144,7 +144,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 
 <div class="header">
   <h1>SAHVAI — MODEL 1 ABC/2 Score Sheet</h1>
-  <div class="subtitle">Subarachnoid Hemorrhage Volume &amp; ICH/IVH Calculator &bull; Freeman &amp; F&ouml;ttinger Method &bull; 5 Cisternal Spaces &bull; 2 Intra-Axial Blood Locations (IPH/ICH) &bull; IVH</div>
+  <div class="subtitle">Subarachnoid Hemorrhage Volume &amp; ICH/IVH Calculator &bull; Freeman &amp; F&ouml;ttinger Method &bull; 5 Cisternal Spaces &bull; Intra-Axial Blood Locations (IPH/ICH) &bull; IVH &bull; EDH &amp; SDH</div>
 </div>
 
 <div class="container">
@@ -156,6 +156,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <button class="tab-btn" onclick="showTab('citations')">Publications</button>
   <button class="tab-btn" onclick="showTab('esah')">eSAH Score</button>
   <button class="tab-btn" onclick="showTab('ivh')">IVH (mod. Graeb)</button>
+  <button class="tab-btn" onclick="showTab('mm')">SAHVAI-MM</button>
 </div>
 
 <!-- EXPORT BAR -->
@@ -195,7 +196,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <div class="measure-row"><label>A — length of SAH (mm)</label><input type="number" step="any" id="s1_a" oninput="calc()"></div>
     <div class="measure-row"><label>B — maximal thickness (mm)</label><input type="number" step="any" id="s1_b" oninput="calc()"></div>
     <div class="measure-row"><label>C — vertical slices (#)</label><input type="number" step="any" id="s1_c" oninput="calc()"></div>
-    <div class="measure-row"><label>Slice thickness (mm)</label><input type="number" step="any" id="s1_st" value="5" oninput="calc()"></div>
+    <div class="measure-row"><label>Slice thickness (mm)</label><input type="number" step="any" id="s1_st" placeholder="mm" oninput="calc()"></div>
   </div>
   <div class="subtotal"><span class="subtotal-label">SSTV</span><span class="subtotal-value" id="r_sstv">0.000 mL</span></div>
 </div>
@@ -208,7 +209,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <div class="measure-row bilateral"><label>A — length of SAH (mm)</label><input type="number" step="any" id="s2_a_r" oninput="calc()"><input type="number" step="any" id="s2_a_l" oninput="calc()"></div>
     <div class="measure-row bilateral"><label>B — maximal thickness (mm)</label><input type="number" step="any" id="s2_b_r" oninput="calc()"><input type="number" step="any" id="s2_b_l" oninput="calc()"></div>
     <div class="measure-row bilateral"><label>C — vertical slices (#)</label><input type="number" step="any" id="s2_c_r" oninput="calc()"><input type="number" step="any" id="s2_c_l" oninput="calc()"></div>
-    <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s2_st_r" value="5" oninput="calc()"><input type="number" step="any" id="s2_st_l" value="5" oninput="calc()"></div>
+    <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s2_st_r" placeholder="mm" oninput="calc()"><input type="number" step="any" id="s2_st_l" placeholder="mm" oninput="calc()"></div>
   </div>
   <div class="subtotal"><span class="subtotal-label">PMTV (R + L)</span><span class="subtotal-value" id="r_pmtv">0.000 mL</span></div>
 </div>
@@ -220,7 +221,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <div class="measure-row"><label>A — length of SAH (mm)</label><input type="number" step="any" id="s3_a" oninput="calc()"></div>
     <div class="measure-row"><label>B — maximal thickness (mm)</label><input type="number" step="any" id="s3_b" oninput="calc()"></div>
     <div class="measure-row"><label>C — vertical slices (#)</label><input type="number" step="any" id="s3_c" oninput="calc()"></div>
-    <div class="measure-row"><label>Slice thickness (mm)</label><input type="number" step="any" id="s3_st" value="5" oninput="calc()"></div>
+    <div class="measure-row"><label>Slice thickness (mm)</label><input type="number" step="any" id="s3_st" placeholder="mm" oninput="calc()"></div>
   </div>
   <div class="subtotal"><span class="subtotal-label">PPTV</span><span class="subtotal-value" id="r_pptv">0.000 mL</span></div>
 </div>
@@ -238,7 +239,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <div class="measure-row bilateral"><label>A — length of SAH (mm)</label><input type="number" step="any" id="s4_a_r" oninput="calc()"><input type="number" step="any" id="s4_a_l" oninput="calc()"></div>
     <div class="measure-row bilateral"><label>B — maximal thickness (mm)</label><input type="number" step="any" id="s4_b_r" oninput="calc()"><input type="number" step="any" id="s4_b_l" oninput="calc()"></div>
     <div class="measure-row bilateral"><label>C — vertical slices (#)</label><input type="number" step="any" id="s4_c_r" oninput="calc()"><input type="number" step="any" id="s4_c_l" oninput="calc()"></div>
-    <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s4_st_r" value="5" oninput="calc()"><input type="number" step="any" id="s4_st_l" value="5" oninput="calc()"></div>
+    <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s4_st_r" placeholder="mm" oninput="calc()"><input type="number" step="any" id="s4_st_l" placeholder="mm" oninput="calc()"></div>
   </div>
   <div class="subtotal"><span class="subtotal-label">SYTV (R + L)</span><span class="subtotal-value" id="r_sytv">0.000 mL</span></div>
 </div>
@@ -250,7 +251,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <div class="measure-row"><label>A — length of SAH (mm)</label><input type="number" step="any" id="s5_a" oninput="calc()"></div>
     <div class="measure-row"><label>B — maximal thickness (mm)</label><input type="number" step="any" id="s5_b" oninput="calc()"></div>
     <div class="measure-row"><label>C — vertical slices (#)</label><input type="number" step="any" id="s5_c" oninput="calc()"></div>
-    <div class="measure-row"><label>Slice thickness (mm)</label><input type="number" step="any" id="s5_st" value="5" oninput="calc()"></div>
+    <div class="measure-row"><label>Slice thickness (mm)</label><input type="number" step="any" id="s5_st" placeholder="mm" oninput="calc()"></div>
   </div>
   <div class="subtotal"><span class="subtotal-label">ITV</span><span class="subtotal-value" id="r_itv">0.000 mL</span></div>
 </div>
@@ -277,7 +278,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
         <div class="measure-row bilateral"><label>A — length (mm)</label><input type="number" step="any" id="s6i_a_r" oninput="calc()"><input type="number" step="any" id="s6i_a_l" oninput="calc()"></div>
         <div class="measure-row bilateral"><label>B — max thickness (mm)</label><input type="number" step="any" id="s6i_b_r" oninput="calc()"><input type="number" step="any" id="s6i_b_l" oninput="calc()"></div>
         <div class="measure-row bilateral"><label>C — vertical slices (#)</label><input type="number" step="any" id="s6i_c_r" oninput="calc()"><input type="number" step="any" id="s6i_c_l" oninput="calc()"></div>
-        <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s6i_st_r" value="5" oninput="calc()"><input type="number" step="any" id="s6i_st_l" value="5" oninput="calc()"></div>
+        <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s6i_st_r" placeholder="mm" oninput="calc()"><input type="number" step="any" id="s6i_st_l" placeholder="mm" oninput="calc()"></div>
       </div>
       <div class="subtotal"><span class="subtotal-label">IPH Total</span><span class="subtotal-value" id="r_iph">0.000 mL</span></div>
     </div>
@@ -288,7 +289,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
         <div class="measure-row bilateral"><label>A — length (mm)</label><input type="number" step="any" id="s6s_a_r" oninput="calc()"><input type="number" step="any" id="s6s_a_l" oninput="calc()"></div>
         <div class="measure-row bilateral"><label>B — max thickness (mm)</label><input type="number" step="any" id="s6s_b_r" oninput="calc()"><input type="number" step="any" id="s6s_b_l" oninput="calc()"></div>
         <div class="measure-row bilateral"><label>C — vertical slices (#)</label><input type="number" step="any" id="s6s_c_r" oninput="calc()"><input type="number" step="any" id="s6s_c_l" oninput="calc()"></div>
-        <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s6s_st_r" value="5" oninput="calc()"><input type="number" step="any" id="s6s_st_l" value="5" oninput="calc()"></div>
+        <div class="measure-row bilateral"><label>Slice thickness (mm)</label><input type="number" step="any" id="s6s_st_r" placeholder="mm" oninput="calc()"><input type="number" step="any" id="s6s_st_l" placeholder="mm" oninput="calc()"></div>
       </div>
       <div class="subtotal"><span class="subtotal-label">SDH Total</span><span class="subtotal-value" id="r_sdh">0.000 mL</span></div>
     </div>
@@ -316,7 +317,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <div class="card-title">Clinical Notes</div>
   <textarea class="notes-area" id="clinicalNotes" placeholder="Enter clinical notes, observations, aneurysm location, treatment plan..."></textarea>
   <div style="font-size:0.72rem; color:var(--muted); margin-top:0.4rem;">
-    <strong>Note:</strong> The "7th Space" is defined as a gyral-sulcal space that is generally too small to contribute any significant volume (cm&sup3;).
+    <strong>Note:</strong> The &ldquo;8th Space&rdquo; is defined as a gyral-sulcal space that is generally too small to contribute any significant volume (cm&sup3;).
     The quadrigeminal cistern was not included in our measurements.
   </div>
 </div>
@@ -345,8 +346,9 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
       <tr><td><strong>3. Prepontine cistern</strong></td><td>Region extending ventrally over the most caudal segment to the most cranial part of pons</td></tr>
       <tr><td><strong>4. Sylvian cisternal complex</strong></td><td>Region of the Sylvian cistern containing the lateral projection of the suprasellar cistern (along the temporal pole), the cistern of lateral cerebral fossa and its occipital projection into the Sylvian fissure; anterior part sits between the fronto-orbital cortex and the temporal lobe</td></tr>
       <tr><td><strong>5. Anterior interhemispheric cistern</strong></td><td>Region cranioventral to suprasellar cistern, until leveled with frontal horn of lateral ventricle</td></tr>
-      <tr><td><strong>6. IPH / SDH</strong></td><td>Intraparenchymal hemorrhage and/or subdural hematoma measured by standard ABC/2 (IPH) or ABC/2&divide;2 correction (SDH)</td></tr>
-      <tr><td><strong>7. Gyral-sulcal (not measured)</strong></td><td>Generally too small to contribute significant volume; not included in the SAHVAI model</td></tr>
+      <tr><td><strong>6. IPH</strong></td><td>Intraparenchymal hemorrhage (IPH), or intracerebral hemorrhage (ICH)</td></tr>
+      <tr><td><strong>7. IVH / SDH / EDH</strong></td><td>Intraventricular hemorrhage (IVH) is semi-quantitatively measured by modified Graeb, and/or subdural hematoma (SDH), or epidural hemorrhage (EDH) components are measured by a modified ABC/2 formula using maximal EDH/SDH thickness and length as A and B, and vertical dimensions as C (<a href="https://doi.org/10.1007/s12028-008-9089-4" target="_blank">Freeman et al., Neurocrit Care 2008; PMID: 18392784</a>)</td></tr>
+      <tr><td><strong>8. Gyral-sulcal SAH blood (not measured)</strong></td><td>Generally too small to contribute significant volume; not included in the above 5-compartment SAHV ABC/2 model by F&ouml;ttinger/Freeman et al.</td></tr>
     </tbody>
   </table>
 </div>
@@ -360,8 +362,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <strong>A</strong> = maximal length of SAH in the respective cisternal compartment (mm)<br>
     <strong>B</strong> = maximal thickness/width of SAH (mm)<br>
     <strong>C</strong> = number of vertical NCHCT slices with SAH &times; slice thickness (mm)<br>
-    For bilateral structures (Perimesencephalic, Sylvian, IPH, SDH), right and left are measured independently and summed.<br>
-    SDH uses an additional &divide;2 correction factor per the original model.
+    For bilateral structures (Perimesencephalic, Sylvian, IPH, SDH), right and left are measured independently and summed.
   </div>
 </div>
 </div>
@@ -410,6 +411,14 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
       <div class="ref-journal">Neurocrit Care. 2026 (online ahead of print)</div>
       <div><a href="https://doi.org/10.1007/s12028-026-02460-z" target="_blank">DOI: 10.1007/s12028-026-02460-z</a> &bull; PMID: 41776018</div>
       <div style="font-size:0.72rem; color:var(--muted); margin-top:0.25rem;">Multicenter cohort (n=1,145) from Brazil &amp; USA. Documents disparities in SAH outcomes: higher mortality in Brazil (23.4% vs 13.4%), longer time to treatment (77.7 vs 4.3h). SAHV recognition could accelerate equitable care globally.</div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-title">6. Computer-Assisted Volumetric Analysis Compared With ABC/2 Method for Assessing Warfarin-Related Intracranial Hemorrhage Volumes</div>
+      <div class="ref-authors">Freeman WD, Barrett KM, Bestic JM, Meschia JF, Broderick DF, Brott TG</div>
+      <div class="ref-journal">Neurocrit Care. 2008;9(3):307&ndash;12</div>
+      <div><a href="https://doi.org/10.1007/s12028-008-9089-4" target="_blank">DOI: 10.1007/s12028-008-9089-4</a> &bull; PMID: 18392784</div>
+      <div style="font-size:0.72rem; color:var(--muted); margin-top:0.25rem;">Compared ABC/2 to computer-assisted volumetric analysis in warfarin-related ICH (n=8). ABC/2 accurately estimates smaller ellipsoid IPH and SDH without requiring an additional &divide;2 correction. Larger, complex-shaped hematomas may be underestimated by ABC/2.</div>
     </div>
 
   </div>
@@ -482,6 +491,189 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
     <span class="subtotal-value" id="graebTotal">0 / 32</span>
   </div>
 </div>
+</div>
+
+<!-- ==================== SAHVAI-MM (MULTIMODAL) TAB ==================== -->
+<div id="tab-mm" class="tab-content">
+
+<div class="card" style="background:linear-gradient(135deg,var(--mayo-dark),var(--mayo-blue));color:#fff;text-align:center;padding:1.5rem;">
+  <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;">SAHVAI-MM (MultiModal) Calculator</h3>
+  <p style="font-size:0.8rem;opacity:0.85;">Integrated outcome prediction combining eSAH, CHESS, NLR, and SAHV&ndash;DCI risk</p>
+</div>
+
+<!-- eSAH Score with direct entry -->
+<div class="card">
+  <div class="card-title" style="color:var(--mayo-blue);"><span class="num">e</span> eSAH Score &mdash; Mortality &amp; Poor Outcome Prediction</div>
+  <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;">Weighted score (0&ndash;5) combining Age, GCS, and SAHV. AUC = 0.89 (mRS), 0.88 (mortality). Auto-fills from Calculator tab if populated, or enter directly below.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
+    <div>
+      <label style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Age (years)</label>
+      <input type="number" id="mm_age" min="18" max="120" placeholder="e.g. 65" oninput="calcMM()" style="width:100%;padding:0.4rem 0.5rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;background:var(--input-bg);">
+    </div>
+    <div>
+      <label style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">GCS (3&ndash;15)</label>
+      <select id="mm_gcs" onchange="calcMM()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;background:var(--input-bg);">
+        <option value="">Select&hellip;</option>
+        <option value="15">15 &mdash; Normal</option>
+        <option value="14">14</option><option value="13">13</option>
+        <option value="12">12</option><option value="11">11</option>
+        <option value="10">10</option><option value="9">9</option>
+        <option value="8">8</option><option value="7">7</option>
+        <option value="6">6</option><option value="5">5</option>
+        <option value="4">4</option><option value="3">3</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">SAHV (mL)</label>
+      <input type="number" id="mm_sahv_input" step="0.1" min="0" placeholder="e.g. 12.5" oninput="calcMM()" style="width:100%;padding:0.4rem 0.5rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;background:var(--input-bg);">
+    </div>
+  </div>
+
+  <div style="font-size:0.68rem;color:var(--muted);margin-top:0.35rem;font-style:italic;" id="mm_autofill_note"></div>
+
+  <!-- eSAH result + scoring breakdown -->
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:0.75rem;margin-top:0.75rem;align-items:center;">
+    <div style="background:var(--mayo-light);border-radius:12px;padding:0.75rem 1.25rem;text-align:center;border:2px solid var(--mayo-blue);">
+      <div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">eSAH Score</div>
+      <div style="font-size:2rem;font-weight:700;color:var(--mayo-blue);" id="mm_esah">0<span style="font-size:1rem;color:var(--muted);">/5</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.5rem;text-align:center;">
+        <div style="font-size:1.2rem;font-weight:700;color:#ef4444;" id="mm_mortality">&mdash;</div>
+        <div style="font-size:0.65rem;color:var(--muted);">Mortality Risk</div>
+      </div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:0.5rem;text-align:center;">
+        <div style="font-size:1.2rem;font-weight:700;color:#f59e0b;" id="mm_poor_outcome">&mdash;</div>
+        <div style="font-size:0.65rem;color:var(--muted);">Poor Outcome (mRS 4&ndash;6)</div>
+      </div>
+    </div>
+  </div>
+  <div id="mm_esah_interp" style="font-size:0.78rem;text-align:center;margin-top:0.5rem;font-weight:600;color:var(--muted);">Enter Age, GCS, and SAHV to calculate eSAH</div>
+
+  <!-- Components breakdown -->
+  <div style="margin-top:0.5rem;font-size:0.68rem;color:var(--muted);text-align:center;">
+    <strong>Scoring:</strong> Age &gt;55 (+1 pt) | GCS 8&ndash;12 (+1 pt), 3&ndash;7 (+2 pts) | SAHV 10&ndash;20 mL (+1 pt), &gt;20 mL (+2 pts)
+  </div>
+</div>
+
+<!-- Auto-pulled summary badges -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.5rem;margin-bottom:0.5rem;">
+  <div style="background:var(--mayo-light);border-radius:8px;padding:0.5rem;text-align:center;">
+    <div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">5-Cistern SAHV</div>
+    <div style="font-size:1.1rem;font-weight:700;color:var(--mayo-blue);" id="mm_sahv">0.000 mL</div>
+  </div>
+  <div style="background:var(--mayo-light);border-radius:8px;padding:0.5rem;text-align:center;">
+    <div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">Age / GCS</div>
+    <div style="font-size:1.1rem;font-weight:700;color:var(--mayo-blue);" id="mm_age_gcs">&mdash; / &mdash;</div>
+  </div>
+  <div style="background:var(--mayo-light);border-radius:8px;padding:0.5rem;text-align:center;">
+    <div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">Mod. Graeb (IVH)</div>
+    <div style="font-size:1.1rem;font-weight:700;color:var(--mayo-blue);" id="mm_graeb">0 / 32</div>
+  </div>
+</div>
+
+<!-- CHESS Score -->
+<div class="grid-2">
+<div class="card">
+  <div class="card-title" style="color:#4f46e5;"><span class="num" style="background:#4f46e5;">C</span> CHESS Score &mdash; Shunt Dependency Risk</div>
+  <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;">Hydrocephalus risk after SAH. Predicts need for ventriculoperitoneal shunt.</p>
+
+  <div style="display:grid;gap:0.5rem;">
+    <div class="measure-row" style="grid-template-columns:2fr 1fr;">
+      <label>Hunt &amp; Hess Grade</label>
+      <select id="mm_hh" onchange="calcMM()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;background:var(--input-bg);">
+        <option value="1">I &mdash; Mild headache</option>
+        <option value="2">II &mdash; Severe headache, nuchal rigidity</option>
+        <option value="3">III &mdash; Drowsy, confusion</option>
+        <option value="4">IV &mdash; Stupor, hemiparesis</option>
+        <option value="5">V &mdash; Deep coma</option>
+      </select>
+    </div>
+    <div class="measure-row" style="grid-template-columns:2fr 1fr;">
+      <label>Aneurysm Location</label>
+      <select id="mm_loc" onchange="calcMM()" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;background:var(--input-bg);">
+        <option value="anterior">Anterior circulation</option>
+        <option value="posterior">Posterior circulation (+1 pt)</option>
+      </select>
+    </div>
+    <div style="background:var(--input-bg);border-radius:8px;padding:0.6rem;display:grid;gap:0.4rem;">
+      <label style="font-size:0.78rem;"><input type="checkbox" id="mm_hydro" onchange="calcMM()" style="margin-right:0.4rem;">Acute Hydrocephalus (+4 pts)</label>
+      <label style="font-size:0.78rem;"><input type="checkbox" id="mm_ivh" onchange="calcMM()" style="margin-right:0.4rem;">Intraventricular Hemorrhage (+1 pt)</label>
+      <label style="font-size:0.78rem;"><input type="checkbox" id="mm_infarct" onchange="calcMM()" style="margin-right:0.4rem;">Early Cerebral Infarction (+1 pt)</label>
+    </div>
+  </div>
+
+  <div class="subtotal" style="margin-top:0.75rem;background:#eef2ff;border:1px solid #c7d2fe;">
+    <span class="subtotal-label">CHESS Score</span>
+    <span class="subtotal-value" id="mm_chess_score" style="color:#4f46e5;">0 / 8</span>
+  </div>
+  <div id="mm_chess_risk" style="font-size:0.78rem;text-align:center;margin-top:0.4rem;font-weight:600;color:var(--muted);">Shunt dependency risk: Low</div>
+</div>
+
+<!-- NLR -->
+<div class="card">
+  <div class="card-title" style="color:#059669;"><span class="num" style="background:#059669;">N</span> Neutrophil-to-Lymphocyte Ratio (NLR)</div>
+  <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;">Inflammatory biomarker predicting DCI. NLR &gt;12.03 cutoff (AUC 0.805).</p>
+
+  <div style="display:grid;gap:0.5rem;">
+    <div class="measure-row" style="grid-template-columns:2fr 1fr;">
+      <label>Neutrophils (&times;10&sup3;/&mu;L)</label>
+      <input type="number" step="0.1" min="0" id="mm_neut" placeholder="e.g. 8.5" oninput="calcMM()">
+    </div>
+    <div class="measure-row" style="grid-template-columns:2fr 1fr;">
+      <label>Lymphocytes (&times;10&sup3;/&mu;L)</label>
+      <input type="number" step="0.1" min="0.1" id="mm_lymph" placeholder="e.g. 2.1" oninput="calcMM()">
+    </div>
+  </div>
+
+  <div class="subtotal" style="margin-top:0.75rem;background:#ecfdf5;border:1px solid #a7f3d0;">
+    <span class="subtotal-label">NLR</span>
+    <span class="subtotal-value" id="mm_nlr_val" style="color:#059669;">&mdash;</span>
+  </div>
+  <div id="mm_nlr_risk" style="font-size:0.78rem;text-align:center;margin-top:0.4rem;font-weight:600;color:var(--muted);">Enter neutrophil and lymphocyte counts</div>
+
+  <!-- DCI Risk from SAHV -->
+  <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:0.75rem;">
+    <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin-bottom:0.4rem;">SAHV-Based DCI Risk</div>
+    <div style="background:#f1f5f9;border-radius:6px;overflow:hidden;height:10px;margin-bottom:0.3rem;">
+      <div id="mm_dci_bar" style="height:100%;width:0%;background:#10b981;transition:width 0.3s;"></div>
+    </div>
+    <div id="mm_dci_text" style="font-size:0.72rem;color:var(--muted);text-align:center;">Calculated from Calculator tab SAHV</div>
+  </div>
+</div>
+</div>
+
+<!-- Clinical Summary Dashboard -->
+<div class="card">
+  <div class="card-title" style="color:#334155;"><span class="num" style="background:#334155;">&#x2211;</span> MultiModal Clinical Summary</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.75rem;">
+    <div id="mm_sum_esah" style="border-radius:8px;padding:0.75rem;text-align:center;border:2px solid var(--border);">
+      <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">eSAH Mortality</div>
+      <div style="font-size:1.5rem;font-weight:700;" id="mm_sum_mort">—</div>
+    </div>
+    <div style="border-radius:8px;padding:0.75rem;text-align:center;border:2px solid var(--border);">
+      <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">CHESS Shunt Risk</div>
+      <div style="font-size:1.5rem;font-weight:700;" id="mm_shunt_pct">—</div>
+    </div>
+    <div style="border-radius:8px;padding:0.75rem;text-align:center;border:2px solid var(--border);">
+      <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">NLR DCI Risk</div>
+      <div style="font-size:1.5rem;font-weight:700;" id="mm_nlr_dci">—</div>
+    </div>
+    <div style="border-radius:8px;padding:0.75rem;text-align:center;border:2px solid var(--border);">
+      <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.5px;">Overall Risk</div>
+      <div style="font-size:1.5rem;font-weight:700;" id="mm_overall">—</div>
+    </div>
+  </div>
+  <div style="margin-top:0.75rem;padding:0.6rem;background:#f8fafc;border-radius:6px;font-size:0.72rem;color:var(--muted);">
+    <strong>Monitoring Recommendation:</strong> <span id="mm_recommend">Enter clinical data to generate multimodal risk profile.</span>
+  </div>
+</div>
+
+<div style="font-size:0.72rem;color:var(--muted);text-align:center;margin-top:0.5rem;">
+  Based on validated scores: eSAH (Sharma/Freeman, Sci Rep 2024), CHESS (Diesing et al.), NLR &amp; SAHV-DCI (F&ouml;ttinger/Freeman, JAHA 2024). For research and clinical decision-support only.
+</div>
+
 </div>
 
 </div><!-- end container -->
@@ -569,6 +761,9 @@ function calc() {
     else if(gcs <= 12) document.getElementById('esah_gcs').value='1';
     else document.getElementById('esah_gcs').value='0';
   }
+
+  // Sync MM tab
+  if(typeof calcMM === 'function') calcMM();
 }
 
 // ===== eSAH SCORE =====
@@ -592,6 +787,165 @@ function calcGraeb() {
   let total = 0;
   ids.forEach(id => { total += parseInt(document.getElementById(id).value) + parseInt(document.getElementById(id+'_e').value); });
   document.getElementById('graebTotal').textContent = total + ' / 32';
+  if(typeof calcMM === 'function') calcMM();
+}
+
+// ===== SAHVAI-MM (MULTIMODAL) =====
+function syncMMFromTabs() {
+  // Pull 5-cistern SAHV from calculator tab
+  const t5 = document.getElementById('total5');
+  const calcSahv = parseFloat((t5 ? t5.textContent : '0').replace(/[^\d.]/g,'')) || 0;
+
+  // Pull age/GCS from calculator tab
+  const calcAge = document.getElementById('patientAge') ? document.getElementById('patientAge').value : '';
+  const calcGcs = document.getElementById('patientGCS') ? document.getElementById('patientGCS').value : '';
+
+  // Auto-fill MM fields if calculator tab has data and MM fields are empty
+  const mmAge = document.getElementById('mm_age');
+  const mmGcs = document.getElementById('mm_gcs');
+  const mmSahvIn = document.getElementById('mm_sahv_input');
+  const noteEl = document.getElementById('mm_autofill_note');
+  let autoFilled = [];
+
+  if(calcAge && !mmAge.value) { mmAge.value = calcAge; autoFilled.push('Age'); }
+  if(calcGcs && !mmGcs.value) { mmGcs.value = calcGcs; autoFilled.push('GCS'); }
+  if(calcSahv > 0 && !mmSahvIn.value) { mmSahvIn.value = calcSahv.toFixed(3); autoFilled.push('SAHV'); }
+  noteEl.textContent = autoFilled.length > 0 ? '\u2713 Auto-filled from Calculator tab: ' + autoFilled.join(', ') : '';
+
+  // Update summary badges
+  const sahvDisplay = parseFloat(mmSahvIn.value) || calcSahv;
+  document.getElementById('mm_sahv').textContent = sahvDisplay.toFixed(3) + ' mL';
+  document.getElementById('mm_age_gcs').textContent = (mmAge.value || calcAge || '\u2014') + ' / ' + (mmGcs.value || calcGcs || '\u2014');
+
+  // Graeb
+  const graebEl = document.getElementById('graebTotal');
+  document.getElementById('mm_graeb').textContent = graebEl ? graebEl.textContent : '0 / 32';
+
+  return { calcSahv };
+}
+
+function calcMM() {
+  const synced = syncMMFromTabs();
+
+  // ===== eSAH Score from MM direct-entry fields =====
+  const mmAge = parseFloat(document.getElementById('mm_age').value) || 0;
+  const mmGcs = parseInt(document.getElementById('mm_gcs').value) || 0;
+  const mmSahv = parseFloat(document.getElementById('mm_sahv_input').value) || 0;
+
+  let agePts = mmAge > 55 ? 1 : 0;
+  let gcsPts = 0;
+  if(mmGcs >= 3 && mmGcs <= 7) gcsPts = 2;
+  else if(mmGcs >= 8 && mmGcs <= 12) gcsPts = 1;
+  let sahvPts = 0;
+  if(mmSahv > 20) sahvPts = 2;
+  else if(mmSahv > 10) sahvPts = 1;
+
+  const esahScore = agePts + gcsPts + sahvPts;
+  const hasInput = mmAge > 0 || mmGcs > 0 || mmSahv > 0;
+
+  document.getElementById('mm_esah').innerHTML = esahScore + '<span style="font-size:1rem;color:var(--muted);">/5</span>';
+
+  const mortalityRates = [5, 15, 25, 40, 60, 80];
+  const poorOutcomeRates = [8, 20, 35, 55, 75, 92];
+  const mort = mortalityRates[Math.min(esahScore, 5)];
+  const poor = poorOutcomeRates[Math.min(esahScore, 5)];
+
+  const mEl = document.getElementById('mm_mortality');
+  const pEl = document.getElementById('mm_poor_outcome');
+  mEl.textContent = hasInput ? '~'+mort+'%' : '\u2014';
+  mEl.style.color = mort >= 50 ? '#ef4444' : mort >= 25 ? '#f59e0b' : '#10b981';
+  pEl.textContent = hasInput ? '~'+poor+'%' : '\u2014';
+  pEl.style.color = poor >= 50 ? '#ef4444' : poor >= 25 ? '#f59e0b' : '#10b981';
+
+  const interps = [
+    'Low risk \u2014 favorable outcomes expected',
+    'Mild \u2014 monitor closely for DCI',
+    'Moderate \u2014 increased risk of poor outcome (OR ~4.6)',
+    'High \u2014 significant risk of mortality and poor mRS',
+    'Very High \u2014 majority poor outcomes expected',
+    'Critical \u2014 highest mortality and morbidity risk'
+  ];
+  const interpEl = document.getElementById('mm_esah_interp');
+  interpEl.textContent = hasInput ? 'eSAH ' + esahScore + ': ' + interps[esahScore] : 'Enter Age, GCS, and SAHV to calculate eSAH';
+  interpEl.style.color = esahScore >= 3 ? '#ef4444' : esahScore >= 2 ? '#f59e0b' : '#10b981';
+
+  // Update summary badge
+  const sumMort = document.getElementById('mm_sum_mort');
+  sumMort.textContent = hasInput ? '~'+mort+'%' : '\u2014';
+  sumMort.style.color = mort >= 50 ? '#ef4444' : mort >= 25 ? '#f59e0b' : '#10b981';
+
+  // SAHV-based DCI risk
+  const bar = document.getElementById('mm_dci_bar');
+  const dciText = document.getElementById('mm_dci_text');
+  let dciPct = 0;
+  const sahvForDci = mmSahv || synced.calcSahv;
+  if(sahvForDci >= 20) { dciPct=65; bar.style.background='#ef4444'; }
+  else if(sahvForDci >= 15) { dciPct=50; bar.style.background='#f59e0b'; }
+  else if(sahvForDci >= 10) { dciPct=35; bar.style.background='#f59e0b'; }
+  else if(sahvForDci > 0) { dciPct=15; bar.style.background='#10b981'; }
+  bar.style.width = Math.min(dciPct/70*100,100)+'%';
+  dciText.textContent = sahvForDci > 0 ? 'SAHV ' + sahvForDci.toFixed(1) + ' mL \u2192 ~' + dciPct + '% DCI risk' : 'Enter SAHV above or on Calculator tab';
+
+  // CHESS Score
+  const hh = parseInt(document.getElementById('mm_hh').value) || 1;
+  let chess = 0;
+  if(hh >= 4) chess += 1;
+  if(document.getElementById('mm_loc').value === 'posterior') chess += 1;
+  if(document.getElementById('mm_hydro').checked) chess += 4;
+  if(document.getElementById('mm_ivh').checked) chess += 1;
+  if(document.getElementById('mm_infarct').checked) chess += 1;
+  document.getElementById('mm_chess_score').textContent = chess + ' / 8';
+  const shuntRates = [5, 10, 15, 25, 40, 60, 80, 90, 95];
+  const shuntRisk = shuntRates[Math.min(chess, 8)];
+  const chessEl = document.getElementById('mm_chess_risk');
+  chessEl.textContent = 'Shunt dependency risk: ~' + shuntRisk + '%';
+  chessEl.style.color = shuntRisk >= 60 ? '#ef4444' : shuntRisk >= 30 ? '#f59e0b' : '#10b981';
+
+  document.getElementById('mm_shunt_pct').textContent = '~'+shuntRisk+'%';
+  document.getElementById('mm_shunt_pct').style.color = shuntRisk >= 60 ? '#ef4444' : shuntRisk >= 30 ? '#f59e0b' : '#10b981';
+
+  // NLR
+  const neut = parseFloat(document.getElementById('mm_neut').value) || 0;
+  const lymph = parseFloat(document.getElementById('mm_lymph').value) || 0;
+  const nlrEl = document.getElementById('mm_nlr_val');
+  const nlrRiskEl = document.getElementById('mm_nlr_risk');
+  let nlrDci = 0;
+  if(neut > 0 && lymph > 0) {
+    const nlr = neut / lymph;
+    nlrEl.textContent = nlr.toFixed(2);
+    if(nlr >= 15) { nlrDci=70; nlrEl.style.color='#ef4444'; }
+    else if(nlr >= 12) { nlrDci=50; nlrEl.style.color='#ef4444'; }
+    else if(nlr >= 8) { nlrDci=30; nlrEl.style.color='#f59e0b'; }
+    else if(nlr >= 5) { nlrDci=15; nlrEl.style.color='#f59e0b'; }
+    else { nlrDci=8; nlrEl.style.color='#10b981'; }
+    nlrRiskEl.textContent = 'DCI risk: ~' + nlrDci + '% (NLR ' + nlr.toFixed(1) + ')';
+    nlrRiskEl.style.color = nlrDci >= 50 ? '#ef4444' : nlrDci >= 30 ? '#f59e0b' : '#10b981';
+  } else {
+    nlrEl.textContent = '\u2014';
+    nlrRiskEl.textContent = 'Enter neutrophil and lymphocyte counts';
+    nlrRiskEl.style.color = 'var(--muted)';
+  }
+
+  // NLR DCI summary
+  const nlrDciEl = document.getElementById('mm_nlr_dci');
+  nlrDciEl.textContent = nlrDci > 0 ? '~'+nlrDci+'%' : '\u2014';
+  nlrDciEl.style.color = nlrDci >= 50 ? '#ef4444' : nlrDci >= 30 ? '#f59e0b' : '#10b981';
+
+  // Overall risk (max of all)
+  const allRisks = [mort, shuntRisk, nlrDci, dciPct].filter(r => r > 0);
+  const maxRisk = allRisks.length > 0 ? Math.max(...allRisks) : 0;
+  const overallEl = document.getElementById('mm_overall');
+  if(maxRisk >= 50) { overallEl.textContent = 'HIGH'; overallEl.style.color='#ef4444'; }
+  else if(maxRisk >= 30) { overallEl.textContent = 'MODERATE'; overallEl.style.color='#f59e0b'; }
+  else if(maxRisk > 0) { overallEl.textContent = 'LOW'; overallEl.style.color='#10b981'; }
+  else { overallEl.textContent = '\u2014'; overallEl.style.color='var(--muted)'; }
+
+  // Recommendation
+  const rec = document.getElementById('mm_recommend');
+  if(maxRisk >= 50) rec.textContent = 'Intensive neuro-monitoring recommended. Consider early shunt evaluation (CHESS) and prophylactic nimodipine. High DCI vigilance.';
+  else if(maxRisk >= 30) rec.textContent = 'Close neurological monitoring with frequent assessments. TCD monitoring for vasospasm. Prophylactic nimodipine recommended.';
+  else if(maxRisk > 0) rec.textContent = 'Standard monitoring protocol. Continue clinical assessments and routine TCD surveillance.';
+  else rec.textContent = 'Enter clinical data to generate multimodal risk profile.';
 }
 
 // ===== TABS =====
@@ -600,6 +954,7 @@ function showTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   event.target.classList.add('active');
+  if(name === 'mm') { syncMMFromTabs(); calcMM(); }
 }
 
 // ===== LIGHTBOX =====
