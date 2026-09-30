@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAHVAI in the browser: SAH, IPH and IVH on head CT</title>
+<meta name="description" content="Automated segmentation and volumes of subarachnoid, intraparenchymal and intraventricular hemorrhage on non-contrast head CT, running entirely in the browser.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>SAHVAI <span>in the browser</span></h1>
+    <p>Drop a non-contrast head CT to segment subarachnoid (SAH), intraparenchymal (IPH) and intraventricular (IVH) hemorrhage and measure their volumes, using the Hybrid 2D/3D UNet of Hu et al. (NeuroImage 2023). Everything runs on this computer.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research use only</h2>
+      <p>This is a research demonstration, not a medical device. It has not been validated or approved for clinical use and must not be used for diagnosis, treatment or any other clinical decision. Segmentations can be wrong; always review them against the images.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this computer</h2>
+      <p>Files are read and processed inside this browser tab on your GPU or CPU. No image data or results are uploaded. The only downloads are this page and the model (about 26 MB), which is cached, so later visits also work offline.</p>
+    </div>
+    <div class="note">
+      <h2>What you need</h2>
+      <ul>
+        <li>A recent desktop Chrome or Edge (Firefox and Safari may work on the CPU).</li>
+        <li>8 GB RAM or more. WebGPU is fastest; on the CPU a scan takes one to a few minutes depending on the number of cores.</li>
+        <li>A <b>non-contrast axial head CT</b>. Thin slices are averaged to 5 mm, the thickness the model was trained on.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div class="group">
+      <span class="lbl">Head alignment</span>
+      <label><input type="radio" name="align" value="auto" checked> Auto</label>
+      <label><input type="radio" name="align" value="manual"> Set</label>
+      <input id="angle" type="number" min="-45" max="45" step="1" value="0" disabled aria-label="Rotation in degrees"> °
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section id="drop" class="drop" tabindex="0">
+    <p class="big"><b>Drop a head CT here</b></p>
+    <p class="hint">A zip of a DICOM study, a DICOM folder, loose DICOM files, a .nii / .nii.gz volume or a .nrrd volume.
+      From a study, the axial non-contrast head series nearest 5 mm is used (bone-kernel, contrast and reformatted series are skipped).</p>
+    <div class="buttons">
+      <label class="btn">Choose file(s)<input id="files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label>
+      <label class="btn">Choose folder<input id="folder" type="file" webkitdirectory></label>
+      <button id="demo" class="btn ghost" type="button">Try the demo case</button>
+    </div>
+  </section>
+
+  <section id="status" class="status" hidden>
+    <div class="stage"><span id="stage">Starting</span><span id="pct"></span></div>
+    <div class="bar"><i id="bar"></i></div>
+  </section>
+
+  <section id="results" hidden>
+    <div class="vols" id="vols"></div>
+    <div id="warn" class="warnbox" hidden></div>
+    <div class="viewer">
+      <div class="canvaswrap" id="canvaswrap">
+        <canvas id="view" aria-label="Axial CT slice with hemorrhage overlay"></canvas>
+        <span class="ori t">A</span><span class="ori b">P</span><span class="ori l">R</span><span class="ori r">L</span>
+        <span id="sliceinfo" class="sliceinfo"></span>
+      </div>
+      <div class="side">
+        <label class="row">Slice <input id="slice" type="range" min="0" max="0" value="0"></label>
+        <div class="row presets" role="radiogroup" aria-label="Window">
+          <label><input type="radio" name="win" value="40,80" checked> Brain</label>
+          <label><input type="radio" name="win" value="60,120"> Blood</label>
+          <label><input type="radio" name="win" value="75,215"> Subdural</label>
+          <label><input type="radio" name="win" value="600,2800"> Bone</label>
+        </div>
+        <label class="row"><input id="overlay" type="checkbox" checked> Hemorrhage overlay</label>
+        <label class="row">Opacity <input id="opacity" type="range" min="0" max="100" value="55"></label>
+        <label class="row"><input id="outline" type="checkbox"> Brain outline (quality check)</label>
+        <div class="legend">
+          <span><i style="background:var(--sah)"></i>SAH</span>
+          <span><i style="background:var(--iph)"></i>IPH</span>
+          <span><i style="background:var(--ivh)"></i>IVH</span>
+        </div>
+        <p class="tip">Scroll over the image or use ↑/↓ to change slice. Click the chart to jump.</p>
+        <canvas id="chart" class="chart" height="120" aria-label="Blood area per slice"></canvas>
+        <div class="dl">
+          <button id="dlLabels" class="btn small">Label map (.nii.gz)</button>
+          <button id="dlCT" class="btn small ghost">CT used (.nii.gz)</button>
+          <button id="dlJSON" class="btn small ghost">Report (.json)</button>
+          <button id="dlPNG" class="btn small ghost">This view (.png)</button>
+        </div>
+      </div>
+    </div>
+    <div class="details" id="details"></div>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Read and resample.</b> The series is reoriented to standard axial order and resampled to 0.5 × 0.5 mm in plane and 5 mm slices, the geometry used to train the model (native spacing within 0.45–0.55 mm and 4.5–5.5 mm is kept).</li>
+      <li><b>Brain extraction.</b> Soft tissue enclosed by the skull is found slice by slice and joined in 3D, then cleaned as in the original code (−20 to 100 HU, small holes filled, calcification removed). Tick <i>Brain outline</i> to check it.</li>
+      <li><b>Alignment and input.</b> The head is rotated to the midline, cropped to the brain, resized to 352 × 288 and split into five HU windows (0–100, 10–90, 20–80, 30–80, 40–80). The model sees 18 slices at a time; longer brains get a second, overlapping window.</li>
+      <li><b>Hybrid 2D/3D UNet.</b> Parallel 2D and 3D encoders with spatial attention feed a 3D decoder that labels each voxel as SAH, IPH, IVH or background. The network is converted to ONNX and run with ONNX Runtime Web (WebGPU or WebAssembly), split into parts so the full-resolution layers run a few slices at a time and fit in a browser tab's memory.</li>
+      <li><b>Post-processing and volumes.</b> Labels are mapped back to the scan, small gaps closed, fragments under 100 pixels removed and mixed regions reconciled as in the original code; volumes are voxel counts × voxel size.</li>
+    </ol>
+    <p class="small">On the BrainHemoAI demo case this browser port reproduces the original PyTorch pipeline to within 6 voxels (SAH Dice 1.000, IVH 0.9998) when given the same brain mask and rotation.</p>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p><b>Research use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p>Model: Hybrid 2D/3D UNet by Hu P, Zhou H, Yan T, et al. <a href="https://doi.org/10.1016/j.neuroimage.2023.120321">Deep learning-assisted identification and quantification of aneurysmal subarachnoid hemorrhage in non-contrast CT scans: development and external validation of Hybrid 2D/3D UNet. NeuroImage 2023;279:120321</a>. Weights from <a href="https://github.com/BrainHemo/BrainHemoAI">BrainHemoAI</a>, converted to ONNX.</p>
+  <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0), which runs <a href="https://doi.org/10.1126/science.aec6129">RADAR</a> (Zhang, Ding et al., Science 2026). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>
