@@ -47,9 +47,9 @@ Upstream `demo.py` casts the rotated scan back to int16; with that truncation th
 
 Recent desktop Chrome or Edge (tested in Chromium); Firefox and Safari may work on the CPU. 8 GB RAM or more. Measured on the demo case (2 windows of 18 slices), Intel Mac with 8 threads: **43 s on WebGPU, 118 s on the CPU**, identical volumes. Multi-threaded CPU needs the page to be cross-origin isolated, which `coi-serviceworker.js` provides when the page is opened on its own; embedded as a tab of the calculator it runs single-threaded on the CPU (WebGPU is unaffected).
 
-## Running locally
+## Running locally and deploying
 
-Any static file server: `python3 -m http.server 8000` in the repository root, then open `http://localhost:8000/sahvai-web/`.
+`python3 serve.py` in this folder, then open `http://localhost:8000/` (any static server works; `serve.py` adds the headers for multi-threaded CPU). For hosting inside an institution, PACS options and governance notes see **[DEPLOY.md](DEPLOY.md)**.
 
 ## Licence and attribution
 
