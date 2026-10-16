@@ -81,7 +81,7 @@ Client requirements: desktop Chrome or Edge (current), 8 GB RAM or more. Measure
 ## 6. Before research use at Mayo
 
 - **Governance:** register through the institutional AI review and IRB processes for research use on patient images; keep outputs out of the clinical record.
-- **Model weights:** converted from BrainHemoAI (Hu et al., *NeuroImage* 2023). That repository states no licence; confirm permission for institutional use with the authors (corresponding author Xingen Zhu, Second Affiliated Hospital of Nanchang University).
+- **Model weights:** converted from BrainHemoAI (Hu et al., *NeuroImage* 2023) and used under the MIT License with the permission of Dr Ping Hu and the BrainHemoAI group (see `LICENSE.md`).
 - **Code licence:** the app code is CC BY-NC-SA 4.0 (derived from radar-web): **non-commercial**, share-alike. Commercial use (e.g. inside a product) would need a clean-room reimplementation of the derived files or a licence from their authors.
 - **Local validation plan (suggested):** run a SAHVAI cohort sample (e.g. 50–100 aneurysmal SAH scans across scanners) against manual segmentations and ABC/2 volumes; report Dice and ICC per compartment; review the brain-outline QC on every case; note failure modes (post-craniotomy or craniectomy, clip or coil artifact, EVD tracts, motion, contrast given). The AI "SAH" volume includes all subarachnoid blood, not only the five cisterns of the ABC/2 SAHV used by the eSAH score.
 

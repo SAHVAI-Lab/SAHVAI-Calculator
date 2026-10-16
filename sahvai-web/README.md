@@ -53,7 +53,7 @@ Recent desktop Chrome or Edge (tested in Chromium); Firefox and Safari may work 
 
 ## Licence and attribution
 
-See [LICENSE.md](LICENSE.md). Please cite:
+See [LICENSE.md](LICENSE.md). The BrainHemoAI code and model weights are used under the MIT License with the permission of Dr Ping Hu and the BrainHemoAI group, to whom we are grateful. Please cite:
 
 - Hu P, Zhou H, Yan T, et al. Deep learning-assisted identification and quantification of aneurysmal subarachnoid hemorrhage in non-contrast CT scans: development and external validation of Hybrid 2D/3D UNet. *NeuroImage* 2023;279:120321. doi:10.1016/j.neuroimage.2023.120321
 - Zhang Q, Zhang J, …, Liang T. An expert-level generalist AI for abdominal CT diagnosis. *Science* 2026;393(6817):eaec6129. doi:10.1126/science.aec6129 (RADAR; the browser architecture of this port follows radar-web)
