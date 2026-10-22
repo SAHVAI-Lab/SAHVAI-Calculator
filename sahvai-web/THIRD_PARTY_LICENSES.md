@@ -11,3 +11,11 @@ This folder bundles the following open-source software (in `vendor/`), taken fro
 - jpeg-lossless-decoder-js 2.1.2 (vendor/codecs/lossless.js), MIT License, https://github.com/rii-mango/JPEGLosslessDecoderJS
 - @cornerstonejs/codec-charls 1.2.7, codec-openjpeg 1.3.6, codec-openjph 2.4.11 (vendor/codecs), MIT License, https://github.com/cornerstonejs
 - coi-serviceworker (coi-serviceworker.js), MIT License, https://github.com/gzuidhof/coi-serviceworker
+
+## Models and demo data (not software libraries)
+
+- BrainHemoAI Hybrid 2D/3D UNet weights and demo scan (models/, demo/brainhemoai-demo-head.nrrd), MIT License, https://github.com/BrainHemo/BrainHemoAI
+- BLAST-CT DeepMedic weights and scan_0 (models/blast/, demo/blast/), Apache License 2.0, Copyright 2020 Imperial College London, https://github.com/biomedia-mira/blast-ct (licenses/Apache-2.0-blast-ct.txt)
+- CLAIM aSAH multiclass nnU-Net weights and BHSD demo cases (models/claim/, demo/claim/), CC BY-NC 4.0, https://github.com/claim-berlin/aSAH-multiclass-segmentation, https://doi.org/10.5281/zenodo.12579491 (licenses/CC-BY-NC-4.0-claim.md)
+
+See LICENSE.md for attribution and the changes made.

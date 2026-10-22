@@ -1,8 +1,8 @@
 # Deploying SAHVAI Web inside an institution (e.g. Mayo Clinic)
 
-Version 1.0 · 30 September 2026 · source: `sahvai-web/` in github.com/sahvai-lab/SAHVAI-Calculator
+Version 2.0 · 22 October 2026 (four panels: SAHVAI, CLAIM, BLAST-CT, RHUH dataset) · source: `sahvai-web/` in github.com/sahvai-lab/SAHVAI-Calculator
 
-> **Research use only.** Not a medical device, not FDA-cleared, and validated on a single public case so far. Deploy for research under your institution's AI-governance and IRB processes; do not use results for patient care.
+> **Research and education use only.** Not a medical device, not FDA-cleared, and checked against the original implementations on public demo cases only. Deploy for research under your institution's AI-governance and IRB processes; do not use results for patient care.
 
 ## 1. What is in the package
 
@@ -10,10 +10,13 @@ Version 1.0 · 30 September 2026 · source: `sahvai-web/` in github.com/sahvai-l
 |---|---|
 | `index.html`, `app.js`, `worker.js`, `style.css` | the web app (static files, no build step) |
 | `lib/` | DICOM / NIfTI / NRRD readers, resampling, brain extraction, UNet orchestration, post-processing |
-| `models/` | the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
+| `models/` | panel 1: the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
+| `models/blast/` | panel 3: the 12 BLAST-CT DeepMedic models (2.1 MB each, float16; Apache-2.0) |
+| `models/claim/` | panel 2: the CLAIM nnU-Net 2D model in two parts (about 93 MB, float16; CC BY-NC 4.0), once converted |
 | `vendor/` | ONNX Runtime Web 1.30 and DICOM image codecs (all local) |
 | `coi-serviceworker.js` | enables multi-threading when the server cannot send the headers below |
-| `demo/` | the public BrainHemoAI example scan |
+| `demo/` | public demo cases: BrainHemoAI `head.nrrd`, three BHSD cases from the CLAIM repository with labels, BLAST-CT `scan_0` with labels |
+| `licenses/` | full licence texts for BLAST-CT (Apache-2.0) and CLAIM (CC BY-NC 4.0) |
 | `tools/` | Python scripts that rebuild the ONNX parts from the original PyTorch weights |
 | `serve.py` | a standard-library Python server with the right headers |
 
@@ -26,7 +29,7 @@ cd sahvai-web
 python3 serve.py            # then open http://localhost:8000/ in Chrome or Edge
 ```
 
-Click **Try the demo case**; expected result: SAH ≈ 77.6 mL, IPH 0 mL, IVH ≈ 2.7 mL.
+Expected demo results: panel 1 **Try the demo case** SAH ≈ 77.6 mL, IPH 0 mL, IVH ≈ 2.7 mL; panel 3 **Try the demo case (TBI)** with the single model IPH ≈ 48.0 mL, EAH ≈ 23.7 mL, oedema ≈ 62.7 mL, IVH ≈ 0.3 mL (as the `blast-ct` command line).
 
 ## 3. Host it on an internal web server
 
@@ -37,7 +40,7 @@ It is a static site: copy the folder to any web server. Four requirements:
    `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
    (Without them `coi-serviceworker.js` adds them on first load; with them it is not needed.)
 3. **MIME types**: `.wasm` → `application/wasm`, `.mjs` / `.js` → `text/javascript`.
-4. Allow files up to ~30 MB (`models/pm.onnx`, the runtime `.wasm`).
+4. Allow files up to ~50 MB (`models/claim/claim2d.onnx.0` and `.1`, `models/pm.onnx`, the runtime `.wasm`).
 
 nginx:
 
@@ -81,7 +84,8 @@ Client requirements: desktop Chrome or Edge (current), 8 GB RAM or more. Measure
 ## 6. Before research use at Mayo
 
 - **Governance:** register through the institutional AI review and IRB processes for research use on patient images; keep outputs out of the clinical record.
-- **Model weights:** converted from BrainHemoAI (Hu et al., *NeuroImage* 2023) and used under the MIT License with the permission of Dr Ping Hu and the BrainHemoAI group (see `LICENSE.md`).
+- **Model weights:** panel 1 converted from BrainHemoAI (Hu et al., *NeuroImage* 2023), MIT License with the permission of Dr Ping Hu and the BrainHemoAI group; panel 2 CLAIM (Kiewitz et al., *Front Neurol* 2024), **CC BY-NC 4.0, non-commercial only**; panel 3 BLAST-CT (Monteiro et al., *Lancet Digit Health* 2020), Apache-2.0. See `LICENSE.md`. BLAST-CT was trained on traumatic brain injury and CLAIM on aneurysmal SAH at one centre; neither has been validated at Mayo.
+- **RHUH dataset (panel 4):** CC BY 4.0, downloaded by the user from Zenodo; not redistributed in this package.
 - **Code licence:** the app code is CC BY-NC-SA 4.0 (derived from radar-web): **non-commercial**, share-alike. Commercial use (e.g. inside a product) would need a clean-room reimplementation of the derived files or a licence from their authors.
 - **Local validation plan (suggested):** run a SAHVAI cohort sample (e.g. 50–100 aneurysmal SAH scans across scanners) against manual segmentations and ABC/2 volumes; report Dice and ICC per compartment; review the brain-outline QC on every case; note failure modes (post-craniotomy or craniectomy, clip or coil artifact, EVD tracts, motion, contrast given). The AI "SAH" volume includes all subarachnoid blood, not only the five cisterns of the ABC/2 SAHV used by the eSAH score.
 
@@ -91,4 +95,7 @@ The conversion and its checks are in `tools/` (needs PyTorch, ONNX, ONNX Runtime
 
 ## Citation
 
-Hu P, Zhou H, Yan T, et al. Deep learning-assisted identification and quantification of aneurysmal subarachnoid hemorrhage in non-contrast CT scans: development and external validation of Hybrid 2D/3D UNet. *NeuroImage* 2023;279:120321.
+- Hu P, Zhou H, Yan T, et al. Deep learning-assisted identification and quantification of aneurysmal subarachnoid hemorrhage in non-contrast CT scans: development and external validation of Hybrid 2D/3D UNet. *NeuroImage* 2023;279:120321.
+- Kiewitz J, Aydin OU, Hilbert A, et al. Deep learning-based multiclass segmentation in aneurysmal subarachnoid hemorrhage. *Front Neurol* 2024;15:1490216.
+- Monteiro M, Newcombe VFJ, Mathieu F, et al. Multiclass semantic segmentation and quantification of traumatic brain injury lesions on head CT using deep learning. *Lancet Digit Health* 2020;2(6):e314–e322.
+- Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation. Zenodo; 2023. doi:10.5281/zenodo.8228847.

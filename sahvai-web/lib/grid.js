@@ -20,20 +20,26 @@ export function orientation(vol) {
   return { perm, flip };
 }
 
-// weights for one axis: output t -> [[src, w], ...] in (unflipped) LPS-ordered index
-function axisWeights(n, sp, tgt, T) {
+// weights for one axis: output t -> [[src, w], ...] in (unflipped) LPS-ordered index.
+// align 'extent': voxel centres at (t + 0.5) * r - 0.5 (pixel-centred, keeps the physical extent; skimage/nnU-Net style)
+// align 'corner': voxel centres at t * r (first voxel centres coincide; SimpleITK Resample style). An empty list = outside.
+// interp 'auto': area average when shrinking by > 1.5x, else linear; 'linear'; 'nearest' (label maps).
+function axisWeights(n, sp, tgt, T, align = 'extent', interp = 'auto') {
   const r = tgt / sp, out = [];
   for (let t = 0; t < T; t++) {
     const list = [];
-    if (r > 1.5) {                                   // area average
+    if (interp === 'auto' && r > 1.5 && align === 'extent') {   // area average
       const a = t * r, b = (t + 1) * r;
       for (let i = Math.max(0, Math.floor(a)); i < Math.min(n, Math.ceil(b)); i++) {
         const w = Math.min(b, i + 1) - Math.max(a, i); if (w > 1e-6) list.push([i, w]);
       }
       const s = list.reduce((x, y) => x + y[1], 0) || 1; list.forEach(p => p[1] /= s);
       if (!list.length) list.push([Math.min(n - 1, Math.max(0, Math.round(a))), 1]);
-    } else {                                         // linear, pixel-centred
-      let u = (t + 0.5) * r - 0.5; u = Math.min(Math.max(u, 0), n - 1);
+    } else {
+      let u = align === 'corner' ? t * r : (t + 0.5) * r - 0.5;
+      if (align === 'corner' && u > n - 1 + 1e-6) { out.push(list); continue; }
+      u = Math.min(Math.max(u, 0), n - 1);
+      if (interp === 'nearest') { list.push([Math.min(n - 1, Math.round(u)), 1]); out.push(list); continue; }
       const i = Math.floor(u), f = u - i;
       if (f > 1e-6 && i + 1 < n) list.push([i, 1 - f], [i + 1, f]); else list.push([i, 1]);
     }
@@ -50,16 +56,20 @@ export function targetSpacing(sp) {
   ];
 }
 
-export async function toGrid(vol, log = () => {}, progress = () => {}) {
+// opts: spacing(sp) -> target spacing (default: SAHVAI rule above); align 'extent' | 'corner'; interp 'auto' | 'linear' | 'nearest'
+export async function toGrid(vol, log = () => {}, progress = () => {}, opts = {}) {
   const t0 = performance.now();
   const { perm, flip } = orientation(vol);
   const inv = [0, 1, 2].map(s => perm.indexOf(s));
   const n = perm.map(s => vol.dims[s]), sp = perm.map(s => vol.spacing[s]);
-  const tgt = targetSpacing(sp);
-  const T = [0, 1, 2].map(a => Math.max(1, Math.round(n[a] * sp[a] / tgt[a])));
-  const tgtExact = [0, 1, 2].map(a => n[a] * sp[a] / T[a]);   // keep the physical extent
-  const W = [0, 1, 2].map(a => axisWeights(n[a], sp[a], tgtExact[a], T[a]).map(l => l.map(([i, w]) => [flip[a] ? n[a] - 1 - i : i, w])));
-  log(`reorient to L-P-S: source axes ${perm.join(',')} flips ${flip.map(Number).join(',')}; ${n.join('x')} @ ${sp.map(s => s.toFixed(3)).join(', ')} mm -> ${T.join('x')} @ ${tgtExact.map(s => s.toFixed(3)).join(', ')} mm`);
+  const align = opts.align || 'extent', interp = opts.interp || 'auto';
+  const tgt = (opts.spacing || targetSpacing)(sp);
+  const T = align === 'corner'
+    ? [0, 1, 2].map(a => Math.max(1, Math.round((n[a] - 1) * sp[a] / tgt[a]) + 1))
+    : [0, 1, 2].map(a => Math.max(1, Math.round(n[a] * sp[a] / tgt[a])));
+  const tgtExact = align === 'corner' ? tgt.slice() : [0, 1, 2].map(a => n[a] * sp[a] / T[a]);   // extent: keep the physical extent
+  const W = [0, 1, 2].map(a => axisWeights(n[a], sp[a], tgtExact[a], T[a], align, interp).map(l => l.map(([i, w]) => [flip[a] ? n[a] - 1 - i : i, w])));
+  log(`${opts.label ? opts.label + ': ' : ''}reorient to L-P-S: source axes ${perm.join(',')} flips ${flip.map(Number).join(',')}; ${n.join('x')} @ ${sp.map(s => s.toFixed(3)).join(', ')} mm -> ${T.join('x')} @ ${tgtExact.map(s => s.toFixed(3)).join(', ')} mm`);
 
   const [nx, ny, nz] = T, stride = [1, nx, nx * ny];
   const hu = new Float32Array(nx * ny * nz);
@@ -78,25 +88,31 @@ export async function toGrid(vol, log = () => {}, progress = () => {}) {
     prefetch();
     plane.fill(0);
     for (const [k, w] of W[aS][t]) { const s = await get(k); for (let i = 0; i < plane.length; i++) plane[i] += w * s[i]; }
+    if (!W[aS][t].length) plane.fill(NaN);
     // along source axis 0
     for (let y = 0; y < n1; y++) {
       const r = y * n0;
-      for (let x = 0; x < Tx; x++) { let v = 0; for (const [i, w] of W[a0][x]) v += w * plane[r + i]; rows[y * Tx + x] = v; }
+      for (let x = 0; x < Tx; x++) { const wl = W[a0][x]; let v = wl.length ? 0 : NaN; for (const [i, w] of wl) v += w * plane[r + i]; rows[y * Tx + x] = v; }
     }
     // along source axis 1, write into the L-P-S grid
     const base = t * stride[aS];
     for (let y = 0; y < Ty; y++) {
       const ob = base + y * stride[a1], wl = W[a1][y];
-      for (let x = 0; x < Tx; x++) { let v = 0; for (const [i, w] of wl) v += w * rows[i * Tx + x]; hu[ob + x * stride[a0]] = v; }
+      for (let x = 0; x < Tx; x++) { let v = wl.length ? 0 : NaN; for (const [i, w] of wl) v += w * rows[i * Tx + x]; hu[ob + x * stride[a0]] = v; }
     }
     for (const k of need[t]) if (lastUse.get(k) === t) cache.delete(k);
+  }
+  if (align === 'corner') {
+    let mn = Infinity, any = false;
+    for (let i = 0; i < hu.length; i++) { const v = hu[i]; if (v !== v) any = true; else if (v < mn) mn = v; }
+    if (any) for (let i = 0; i < hu.length; i++) if (hu[i] !== hu[i]) hu[i] = mn;
   }
   // affine (LPS) of the output grid: columns = axis direction * spacing, last column = centre of voxel 0
   const dirOut = [0, 1, 2].map(a => vol.dir[perm[a]].map(c => flip[a] ? -c : c));
   let affine = null;
   if (vol.origin) {
     const idx0 = [0, 0, 0];   // source (unflipped) index of output voxel 0's centre, per source axis
-    for (let a = 0; a < 3; a++) { const u = 0.5 * tgtExact[a] / sp[a] - 0.5; idx0[perm[a]] = flip[a] ? n[a] - 1 - u : u; }
+    for (let a = 0; a < 3; a++) { const u = align === 'corner' ? 0 : 0.5 * tgtExact[a] / sp[a] - 0.5; idx0[perm[a]] = flip[a] ? n[a] - 1 - u : u; }
     const o = [0, 1, 2].map(c => vol.origin[c] + idx0.reduce((acc, u, s) => acc + u * vol.spacing[s] * vol.dir[s][c], 0));
     affine = [0, 1, 2].map(c => [dirOut[0][c] * tgtExact[0], dirOut[1][c] * tgtExact[1], dirOut[2][c] * tgtExact[2], o[c]]).concat([[0, 0, 0, 1]]);
   }
