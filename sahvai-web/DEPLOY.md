@@ -12,7 +12,7 @@ Version 2.0 · 22 October 2026 (four panels: SAHVAI, CLAIM, BLAST-CT, RHUH datas
 | `lib/` | DICOM / NIfTI / NRRD readers, resampling, brain extraction, UNet orchestration, post-processing |
 | `models/` | panel 1: the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
 | `models/blast/` | panel 3: the 12 BLAST-CT DeepMedic models (2.1 MB each, float16; Apache-2.0) |
-| `models/claim/` | panel 2: the CLAIM nnU-Net 2D model in two parts (about 93 MB, float16; CC BY-NC 4.0), once converted |
+| `models/claim/` | panel 2: the CLAIM nnU-Net 2D model in two parts (92.7 MB, float16; CC BY-NC 4.0) |
 | `vendor/` | ONNX Runtime Web 1.30 and DICOM image codecs (all local) |
 | `coi-serviceworker.js` | enables multi-threading when the server cannot send the headers below |
 | `demo/` | public demo cases: BrainHemoAI `head.nrrd`, three BHSD cases from the CLAIM repository with labels, BLAST-CT `scan_0` with labels |
@@ -29,7 +29,7 @@ cd sahvai-web
 python3 serve.py            # then open http://localhost:8000/ in Chrome or Edge
 ```
 
-Expected demo results: panel 1 **Try the demo case** SAH ≈ 77.6 mL, IPH 0 mL, IVH ≈ 2.7 mL; panel 3 **Try the demo case (TBI)** with the single model IPH ≈ 48.0 mL, EAH ≈ 23.7 mL, oedema ≈ 62.7 mL, IVH ≈ 0.3 mL (as the `blast-ct` command line).
+Expected demo results: panel 1 **Try the demo case** SAH ≈ 77.6 mL, IPH 0 mL, IVH ≈ 2.7 mL; panel 3 **Try the demo case (TBI)** with the single model IPH ≈ 48.0 mL, EAH ≈ 23.7 mL, oedema ≈ 62.7 mL, IVH ≈ 0.3 mL (as the `blast-ct` command line); panel 2 **Demo: BHSD case 1** (exact mode) SAH ≈ 20.6 mL, IVH ≈ 0.9 mL, ventricles ≈ 96 mL, any-blood Dice 0.44 against the BHSD labels (nnU-Net itself: 0.45).
 
 ## 3. Host it on an internal web server
 

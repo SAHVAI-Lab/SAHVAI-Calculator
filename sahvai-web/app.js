@@ -227,7 +227,7 @@ class DatasetPanel extends Panel {
   go() {
     if (!this.ct) { this.setStage('Choose or drop the case CT first.', 0); return; }
     this.setModel(this.q('select.model').value);
-    const opts = this.model === 'claim' ? { mode: 'fast', mirror: false } : this.model === 'blast' ? { ensemble: false } : { angle: null };
+    const opts = this.model === 'claim' ? { mode: 'exact', mirror: false } : this.model === 'blast' ? { ensemble: false } : { angle: null };
     if (submit(this, { model: this.model, files: [this.ct], gt: this.mask, gtScheme: 'binary', opts, label: `RHUH case ${this.ct.name}${this.mask ? ` + ${this.mask.name}` : ''} with ${this.model}` })) this.begin();
   }
 }

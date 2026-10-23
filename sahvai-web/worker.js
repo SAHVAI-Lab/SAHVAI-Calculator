@@ -11,7 +11,7 @@ import { toGrid } from './lib/grid.js';
 import { analyse } from './lib/pipeline.js';
 import { PARTS } from './lib/unet.js';
 import { runBlast, BLAST_GRID } from './lib/blast.js';
-import { runClaim, CLAIM_GRID } from './lib/claim.js';
+import { runClaim, CLAIM_GRID, CLAIM_INPUT_GRID } from './lib/claim.js';
 
 const base = new URL('./', import.meta.url).href;
 ort.env.wasm.wasmPaths = base + 'vendor/ort/';
@@ -178,7 +178,10 @@ async function runModel(model, g, S, dev, data) {
   const st = (s, f) => stage(`${s}${s.startsWith('Segmenting') ? ` · ${dev === 'webgpu' ? 'WebGPU' : 'CPU'}` : ''}`, f);
   if (model === 'sahvai') return analyse(g, { call, log, angle: o.angle ?? null, slab: dev === 'webgpu' ? 6 : 4, stage: st });
   if (model === 'blast') return runBlast(g, { call, models: Object.keys(S), log, stage: st });
-  if (model === 'claim') return runClaim(g, { call, mode: o.mode || 'fast', mirror: !!o.mirror, log, stage: st });
+  if (model === 'claim') {
+    const gi = await toGrid(data._vol, () => {}, f => stage('Preparing the network input', f), CLAIM_INPUT_GRID);
+    return runClaim(g, { call, input: gi.hu, mode: o.mode || 'exact', mirror: !!o.mirror, log, stage: st });
+  }
 }
 
 const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID };
@@ -205,6 +208,7 @@ async function handle(data) {
     const ready = getSessions(model, names, device).catch(e => e);
     stage('Reading the scan', 0);
     const { vol, info } = await readVolume(data);
+    data._vol = vol;
     const g = await toGrid(vol, log, f => stage('Decoding slices', f), GRID[model]);
     info.native_size = g.native.dims; info.native_spacing_mm = g.native.spacing.map(s => +s.toFixed(3));
     info.grid_size = [g.nx, g.ny, g.nz]; info.grid_spacing_mm = g.sp.map(s => +s.toFixed(3));

@@ -93,13 +93,13 @@
       <div><h2 id="h-claim">CLAIM aSAH <span>Charité Berlin · nnU-Net multiclass</span></h2><p class="sub">Six classes on non-contrast CT after aneurysmal SAH: SAH, intraventricular hemorrhage, ventricles, intracerebral hemorrhage, aneurysm and subdural hematoma.</p></div>
       <span class="origin">CLAIM · Charité Lab for AI in Medicine, Berlin</span>
     </header>
-    <div class="pending note warn" hidden><b>CLAIM weights not installed yet.</b> The converted model files (<code>models/claim/</code>) are added once the CC BY-NC 4.0 weights from Zenodo have been converted and checked against the authors' reference output. Until then this panel cannot run.</div>
+    <div class="pending note warn" hidden><b>CLAIM model files not found.</b> This copy of SAHVAI Web has no <code>models/claim/</code> folder; convert the CC BY-NC 4.0 weights from Zenodo with <code>tools/claim_export.py</code> to enable this panel.</div>
     <div class="opts">
       <div class="group" role="radiogroup" aria-label="CLAIM inference mode"><span class="lbl">Inference</span>
-        <label title="The nnU-Net sliding window restricted to the skull plus 8 mm: about half the network passes"><input type="radio" name="claim-mode" value="fast" checked> Fast (head region only)</label>
-        <label title="nnU-Net sliding window with Gaussian weighting, as nnUNetv2_predict"><input type="radio" name="claim-mode" value="exact"> Exact nnU-Net sliding window</label></div>
+        <label title="The nnU-Net sliding window restricted to the skull plus 8 mm: about half the network passes, small differences at tile edges"><input type="radio" name="claim-mode" value="fast"> Fast (head region only, approximate)</label>
+        <label title="nnU-Net sliding window with Gaussian weighting, as nnUNetv2_predict"><input type="radio" name="claim-mode" value="exact" checked> Exact nnU-Net sliding window (default)</label></div>
       <label><input class="mirror" type="checkbox"> Mirroring (test-time augmentation, 4× slower)</label>
-      <span class="small">2D model, about 93 MB download, cached.</span>
+      <span class="small">2D model, 92.7 MB download, cached after the first run.</span>
     </div>
     <div class="drop" tabindex="0">
       <p class="big"><b>Drop a head CT here</b></p>
@@ -124,7 +124,7 @@
     <p><b>Model.</b> Kiewitz J, Aydin OU, Hilbert A, Gultom M, Nouri A, Khalil AA, Vajkoczy P, Tanioka S, Ishida F, Dengler NF, Frey D. Deep learning-based multiclass segmentation in aneurysmal subarachnoid hemorrhage. <i>Front Neurol</i> 2024;15:1490216. <a href="https://doi.org/10.3389/fneur.2024.1490216">doi:10.3389/fneur.2024.1490216</a> (preprint: medRxiv <a href="https://doi.org/10.1101/2024.06.24.24309431">2024.06.24.24309431</a>)</p>
     <p><b>Code and weights.</b> <a href="https://claim.charite.de/en/projects/subarachnoid_hemorrhage_segmentation">CLAIM project page</a> · <a href="https://github.com/claim-berlin/aSAH-multiclass-segmentation">github.com/claim-berlin/aSAH-multiclass-segmentation</a> · weights on Zenodo <a href="https://doi.org/10.5281/zenodo.12579491">doi:10.5281/zenodo.12579491</a>. Licensed <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a> (attribution, non-commercial use only); the nnU-Net 2D network is converted to ONNX without changes to the weights. nnU-Net: Isensee F, Jaeger PF, Kohl SAA, Petersen J, Maier-Hein KH. <i>Nat Methods</i> 2021;18:203–211 (Apache-2.0).</p>
     <p><b>Demo data.</b> Three cases from the BHSD dataset as distributed in the CLAIM repository: Wu B, Xie Y, Zhang Z, et al. BHSD: a 3D multi-class brain hemorrhage segmentation dataset. In: <i>Machine Learning in Medical Imaging (MLMI 2023)</i>, LNCS 14348. Springer; 2024. <a href="https://doi.org/10.1007/978-3-031-45673-2_15">doi:10.1007/978-3-031-45673-2_15</a>. The reference labels shown with the demo are those supplied with the CLAIM demo data.</p>
-    <p><b>How it runs here.</b> As nnUNetv2_predict for the 2D configuration: in-plane resampling to 0.4453 mm (linear here, cubic spline in nnU-Net), CT normalisation (clip to −3…88 HU, z-score with mean 32.47, SD 27.41), 512 × 512 tiles, argmax. The authors report similar accuracy for their 2D and 3D models and used the 2D model for external validation.</p>
+    <p><b>How it runs here.</b> As nnUNetv2_predict for the 2D configuration: clip to −3…88 HU, cubic-spline resampling in plane to 0.4453 mm, z-score (mean 32.47, SD 27.41), 512 × 512 tiles with Gaussian weighting, argmax. Checked against nnUNetv2_predict with the published weights on the three demo cases (see the README). The authors report similar accuracy for their 2D and 3D models and used the 2D model for external validation.</p>
     <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>
   </section>
 

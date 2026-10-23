@@ -1,6 +1,6 @@
 // CLAIM aSAH multiclass segmentation (Kiewitz et al., Front Neurol 2024; github.com/claim-berlin/aSAH-multiclass-segmentation;
 // weights CC BY-NC 4.0, Zenodo 10.5281/zenodo.12579491) in the browser: nnU-Net v2 "2d" configuration.
-// Mirrors nnU-Net inference: in-plane resampling to the plans spacing (0.4453 mm; slice spacing kept),
+// Mirrors nnU-Net inference: clipping, then cubic-spline in-plane resampling to the plans spacing (0.4453 mm; slice spacing kept),
 // CTNormalization (clip to the 0.5/99.5 percentiles of the training foreground, z-score with its mean/std),
 // slice-by-slice prediction with 512 x 512 tiles. "exact" = nnU-Net sliding window (step 0.5, Gaussian
 // importance weighting); "fast" = the same sliding window restricted to the skull + 8 mm (one centred tile on an axis where that fits).
@@ -11,7 +11,9 @@ export const CLAIM_CLASSES = ['background', 'SAH', 'IVH', 'Ventricles', 'ICH', '
 export const CLAIM_BLOOD = [1, 2, 4, 6];
 export const CLAIM_PLANS = { spacing: 0.4453119933605194, patch: 512, clip: [-3, 88], mean: 32.46885299682617, std: 27.41019630432129 };
 // thin slices are averaged to 5 mm (the model was trained on 5.5-6.5 mm scans); thicker slices are kept as they are
-export const CLAIM_GRID = { spacing: sp => [CLAIM_PLANS.spacing, CLAIM_PLANS.spacing, sp[2] >= 4 ? sp[2] : 5], align: 'extent', interp: 'auto', label: 'CLAIM' };
+export const CLAIM_GRID = { spacing: sp => [CLAIM_PLANS.spacing, CLAIM_PLANS.spacing, sp[2] >= 4 ? sp[2] : 5], align: 'extent', interp: 'linear', label: 'CLAIM' };
+// the network input: as nnU-Net, intensities are clipped before the (cubic spline, in-plane) resampling
+export const CLAIM_INPUT_GRID = { ...CLAIM_GRID, interp: 'cubic', label: undefined, pre: v => v < CLAIM_PLANS.clip[0] ? CLAIM_PLANS.clip[0] : v > CLAIM_PLANS.clip[1] ? CLAIM_PLANS.clip[1] : v };
 const NC = 7, PS = CLAIM_PLANS.patch;
 
 export function normalise(hu) {
@@ -53,10 +55,11 @@ function flip(src, n, fx, fy) {
 }
 
 // call('claim2d', {x}) -> [{data: logits (1,7,512,512)}]; mode 'fast' | 'exact'; mirror bool
-export async function runClaim(g, { call, mode = 'fast', mirror = false, flipY = true, log = () => {}, stage = () => {} } = {}) {
+// g: the HU grid (display, head box); input: the same grid built with CLAIM_INPUT_GRID (clipped, cubic); defaults to g.hu
+export async function runClaim(g, { call, input = null, mode = 'exact', mirror = false, flipY = true, log = () => {}, stage = () => {} } = {}) {
   const { nx, ny, nz } = g, P = nx * ny, t0 = performance.now();
   const row = y => flipY ? ny - 1 - y : y;   // network row -> grid row
-  const x = normalise(g.hu), labels = new Uint8Array(P * nz);
+  const x = normalise(input || g.hu), labels = new Uint8Array(P * nz);
   // head bounding box for the single-tile mode: the skull (HU > 300) plus an 8 mm margin, so the table and
   // head holder do not count (the labels outside the tile stay background)
   let x0 = nx, x1 = -1, y0 = ny, y1 = -1;
@@ -77,7 +80,7 @@ export async function runClaim(g, { call, mode = 'fast', mirror = false, flipY =
   let tilesX, tilesY;
   if (mode === 'fast') { tilesX = span(x0 + ox, x1 + ox, W); tilesY = span(y0 + oy, y1 + oy, H); }
   else { tilesX = steps(W, PS); tilesY = steps(H, PS); }
-  const gauss = mode === 'exact' && tilesX.length * tilesY.length > 1 ? gaussian(PS) : null;
+  const gauss = tilesX.length * tilesY.length > 1 ? gaussian(PS) : null;
   const flips = mirror ? [[0, 0], [1, 0], [0, 1], [1, 1]] : [[0, 0]];
   const nPass = nz * tilesX.length * tilesY.length * flips.length;
   log(`CLAIM: ${nx}x${ny}x${nz} at ${g.sp.map(s => s.toFixed(3)).join(' x ')} mm; ${mode} mode, ${tilesX.length * tilesY.length} tile(s) per slice, mirroring ${mirror ? 'on (x4)' : 'off'}: ${nPass} network passes`);

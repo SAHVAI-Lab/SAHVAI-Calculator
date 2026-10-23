@@ -16,9 +16,13 @@ feats = [min(c['UNet_base_num_features'] * 2 ** i, c['unet_max_num_features']) f
 net = PlainConvUNet(1, n, feats, torch.nn.Conv2d, c['conv_kernel_sizes'], c['pool_op_kernel_sizes'], c['n_conv_per_stage_encoder'], 7,
                     c['n_conv_per_stage_decoder'], conv_bias=True, norm_op=torch.nn.InstanceNorm2d, norm_op_kwargs={'eps': 1e-5, 'affine': True},
                     nonlin=torch.nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=False).eval()
-sd = torch.load(CKPT, map_location='cpu', weights_only=False)['network_weights']
+# load without unpickling arbitrary code: the checkpoint only needs two numpy globals (from its training log)
+try: from numpy._core.multiarray import scalar
+except ImportError: from numpy.core.multiarray import scalar
+torch.serialization.add_safe_globals([(scalar, 'numpy.core.multiarray.scalar'), (np.dtype, 'numpy.dtype')] + [type(np.dtype(t)) for t in ('float64', 'float32', 'int64')])
+sd = torch.load(CKPT, map_location='cpu', weights_only=True)['network_weights']
 sd = {k.replace('_orig_mod.', '').replace('module.', ''): v for k, v in sd.items()}
-print(net.load_state_dict(sd, strict=False))
+r = net.load_state_dict(sd, strict=False); print('missing', r.missing_keys, 'unexpected', r.unexpected_keys); assert not r.missing_keys
 x = torch.randn(1, 1, 512, 512)
 with torch.no_grad(): ref = net(x).numpy()
 os.makedirs(OUT, exist_ok=True)

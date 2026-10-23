@@ -13,7 +13,7 @@ Four panels on one page, all running entirely in the browser with ONNX Runtime W
 
 The design follows [RADAR in the browser](https://github.com/jarrelscy/radar-web), the browser port of Alibaba DAMO Academy's RADAR abdominal CT model (Zhang, Ding et al., *Science* 2026).
 
-Images never leave the computer: files are read and processed in the browser tab and nothing is uploaded. Models are served from this site and cached by the browser (SAHVAI 26.5 MB, BLAST-CT 2.1 MB per model, CLAIM about 93 MB).
+Images never leave the computer: files are read and processed in the browser tab and nothing is uploaded. Models are served from this site and cached by the browser (SAHVAI 26.5 MB, BLAST-CT 2.1 MB per model, CLAIM 92.7 MB in two parts).
 
 > **Research and education use only.** This is not a medical device. None of these models has been validated or approved for clinical use in this form; do not use them for diagnosis, triage or treatment decisions. Always review the segmentation against the images.
 
@@ -58,11 +58,21 @@ Upstream `demo.py` casts the rotated scan back to int16; with that truncation th
 
 The nnU-Net v2 **2d** configuration from [claim-berlin/aSAH-multiclass-segmentation](https://github.com/claim-berlin/aSAH-multiclass-segmentation) (weights: [Zenodo 12579491](https://doi.org/10.5281/zenodo.12579491)): PlainConvUNet, 8 stages, 32→512 features, 46 M parameters, 7 outputs (0 background, 1 SAH, 2 IVH, 3 ventricles, 4 ICH, 5 aneurysm, 6 SDH). The authors report similar performance for their 2D and 3D models and used the 2D model for external validation; the 2D model is the practical one for a browser.
 
-`lib/claim.js` follows `nnUNetv2_predict`: reorient, resample in plane to the plans spacing 0.4453 mm (slice spacing kept; slices thinner than 4 mm are averaged to 5 mm, a documented deviation, since training scans were 5.5–6.5 mm), CT normalisation (clip −3…88 HU, (x − 32.47) / 27.41), 512 × 512 tiles, argmax. **Exact** mode is nnU-Net's sliding window (step 0.5, Gaussian importance map); **Fast** mode runs the same sliding window only over the skull plus 8 mm (typically 2 instead of 4 tiles per slice); labels outside it are background. Optional mirroring over both in-plane axes, as nnU-Net's default test-time augmentation. Deviation: linear rather than third-order spline in-plane resampling.
+`lib/claim.js` follows `nnUNetv2_predict` for the 2D configuration: reorient; clip to −3…88 HU, then resample in plane to the plans spacing 0.4453 mm with a cubic B-spline (nnU-Net order 3; slice spacing kept, and slices thinner than 4 mm are averaged to 5 mm, a documented deviation, since training scans were 5.5–6.5 mm); z-score with mean 32.47 and SD 27.41; 512 × 512 tiles with nnU-Net's sliding window (step 0.5, Gaussian importance map); argmax. The NIfTI storage order nnU-Net sees (L-A-S for dcm2niix-style files) is reproduced by flipping rows. **Exact** (default) is the full sliding window; **Fast** restricts it to the skull plus 8 mm (about half the passes, small differences at tile edges). Optional mirroring over both in-plane axes, nnU-Net's default test-time augmentation.
 
-Demo: three BHSD cases shipped with the CLAIM repository, with their reference labels (BHSD scheme 1 EDH, 2 IPH, 3 IVH, 4 SAH, 5 SDH, mapped onto CLAIM's classes for Dice).
+Validation with the published weights (`2d_checkpoint_best.pth`, Zenodo 12579491), on the three BHSD demo cases:
 
-Status: the panel is wired up and turns itself on when `models/claim/claim2d.onnx.0` and `.1` are present. The weights (`2d_checkpoint_best.pth`, CC BY-NC 4.0) must be downloaded from Zenodo, converted (`tools/claim_export.py`) and checked against the authors' `segmentations_2d` reference before they are added.
+| check | result |
+|---|---|
+| this checkpoint in nnUNetv2_predict (CPU) vs the authors' `segmentations_2d` | 373 of 8.4 M voxels differ (case 1) |
+| ONNX fp32 / fp16 vs PyTorch (random input) | max logit difference 4e-4 / 7e-2; argmax 0 / 10 of 262 k pixels differ |
+| preprocessing in JavaScript vs nnU-Net (case 1) | identical to 2e-7 (z-scored units) except one border row |
+| network + sliding window in JavaScript (fp16, exact, no mirroring) vs nnU-Net, in nnU-Net's own grid (case 1) | **31 of 10.1 M voxels differ**; SAH Dice 0.9995, IVH 1.000, ventricles 0.9999 |
+| any-blood Dice vs the expert labels, JavaScript / nnU-Net (exact, case 1) | 0.444 / 0.446 |
+| any-blood Dice vs the expert labels, fast mode / nnU-Net, cases 1–3 | 0.448 / 0.446, 0.814 / 0.819, 0.799 / 0.798 |
+| fast vs exact mode (case 1) | 4 683 voxels differ; SAH Dice 0.93, IVH 0.95, ventricles 0.99 |
+
+Demo: three BHSD cases shipped with the CLAIM repository, with their reference labels (BHSD scheme 1 EDH, 2 IPH, 3 IVH, 4 SAH, 5 SDH, mapped onto CLAIM's classes for Dice). Only the 2D model is ported; the 3D full-resolution checkpoint is not used.
 
 ## Panel 3: BLAST-CT (traumatic brain injury lesions)
 
