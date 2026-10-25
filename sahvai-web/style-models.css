@@ -75,7 +75,8 @@ h2 { font-size: 1rem; margin: 0 0 6px; color: var(--mayo-blue); }
 .side .row { display: flex; align-items: center; gap: 8px; }
 .side input[type=range] { flex: 1; }
 .presets { flex-wrap: wrap; gap: 4px 12px !important; }
-.legend { display: flex; gap: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.legend span { white-space: nowrap; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .tip { color: var(--muted); font-size: .78rem; margin: 0; }
 .chart { width: 100%; height: 120px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: #fbfcfe; }
