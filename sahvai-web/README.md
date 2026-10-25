@@ -2,14 +2,14 @@
 
 **https://sahvai-lab.github.io/SAHVAI-Calculator/sahvai-web/** (also the *SAHVAI Web (AI)* tab of the [SAHVAI Calculator](https://sahvai-lab.github.io/SAHVAI-Calculator/))
 
-Four panels on one page, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer underneath.
+Four pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the other three (`claim.html`, `blast.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
 
-| panel | model / data | from | classes | licence |
+| page | model / data | from | classes | licence |
 |---|---|---|---|---|
-| 1 SAHVAI | Hybrid 2D/3D UNet, BrainHemoAI weights (Hu et al., *NeuroImage* 2023) | BrainHemoAI | SAH, IPH, IVH | MIT (with permission) |
-| 2 CLAIM | nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., *Front Neurol* 2024) | CLAIM, Charité Berlin | SAH, IVH, ventricles, ICH, aneurysm, SDH | CC BY-NC 4.0 |
-| 3 BLAST-CT | DeepMedic, 1 or 12 models (Monteiro et al., *Lancet Digit Health* 2020) | Cambridge / Imperial College London | IPH, extra-axial haemorrhage, oedema, IVH (traumatic brain injury) | Apache-2.0 |
-| 4 RHUH dataset | open aSAH NCCT scans with expert bleeding masks (Cepeda & García-García, Zenodo 2023) | Río Hortega University Hospital, Valladolid | expert mask vs any of the three models (Dice, volumes) | CC BY 4.0 (data not hosted here) |
+| SAHVAI (`index.html`) | Hybrid 2D/3D UNet, BrainHemoAI weights (Hu et al., *NeuroImage* 2023) | BrainHemoAI | SAH, IPH, IVH | MIT (with permission) |
+| CLAIM aSAH (`claim.html`) | nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., *Front Neurol* 2024) | CLAIM, Charité Berlin | SAH, IVH, ventricles, ICH, aneurysm, SDH | CC BY-NC 4.0 |
+| BLAST-CT (`blast.html`) | DeepMedic, 1 or 12 models (Monteiro et al., *Lancet Digit Health* 2020) | Cambridge / Imperial College London | IPH, extra-axial haemorrhage, oedema, IVH (traumatic brain injury) | Apache-2.0 |
+| RHUH dataset (`rhuh.html`) | open aSAH NCCT scans with expert bleeding masks (Cepeda & García-García, Zenodo 2023) | Río Hortega University Hospital, Valladolid | expert mask vs any of the three models (Dice, volumes) | CC BY 4.0 (data not hosted here) |
 
 The design follows [RADAR in the browser](https://github.com/jarrelscy/radar-web), the browser port of Alibaba DAMO Academy's RADAR abdominal CT model (Zhang, Ding et al., *Science* 2026).
 
@@ -17,7 +17,7 @@ Images never leave the computer: files are read and processed in the browser tab
 
 > **Research and education use only.** This is not a medical device. None of these models has been validated or approved for clinical use in this form; do not use them for diagnosis, triage or treatment decisions. Always review the segmentation against the images.
 
-## Panel 1: SAHVAI (BrainHemoAI Hybrid 2D/3D UNet)
+## SAHVAI (BrainHemoAI Hybrid 2D/3D UNet) — `index.html`
 
 ### Inputs
 
@@ -54,7 +54,7 @@ From a DICOM study the series is chosen in this order: axial; not a bone/lung ke
 
 Upstream `demo.py` casts the rotated scan back to int16; with that truncation the upstream result differs from the float path by about 2.5% in SAH volume (Dice 0.976). The tools in `tools/` reproduce the conversion (`export_2d.py`, `parts.py`, `to_fp16.py`).
 
-## Panel 2: CLAIM aSAH multiclass nnU-Net (Charité Berlin)
+## CLAIM aSAH multiclass nnU-Net (Charité Berlin) — `claim.html`
 
 The nnU-Net v2 **2d** configuration from [claim-berlin/aSAH-multiclass-segmentation](https://github.com/claim-berlin/aSAH-multiclass-segmentation) (weights: [Zenodo 12579491](https://doi.org/10.5281/zenodo.12579491)): PlainConvUNet, 8 stages, 32→512 features, 46 M parameters, 7 outputs (0 background, 1 SAH, 2 IVH, 3 ventricles, 4 ICH, 5 aneurysm, 6 SDH). The authors report similar performance for their 2D and 3D models and used the 2D model for external validation; the 2D model is the practical one for a browser.
 
@@ -74,17 +74,17 @@ Validation with the published weights (`2d_checkpoint_best.pth`, Zenodo 12579491
 
 Demo: three BHSD cases shipped with the CLAIM repository, with their reference labels (BHSD scheme 1 EDH, 2 IPH, 3 IVH, 4 SAH, 5 SDH, mapped onto CLAIM's classes for Dice). Only the 2D model is ported; the 3D full-resolution checkpoint is not used.
 
-## Panel 3: BLAST-CT (traumatic brain injury lesions)
+## BLAST-CT (traumatic brain injury lesions) — `blast.html`
 
-The pre-trained DeepMedic models of [biomedia-mira/blast-ct](https://github.com/biomedia-mira/blast-ct) (Monteiro, Newcombe et al., *Lancet Digit Health* 2020; University of Cambridge Division of Anaesthesia / NeuroICU and BioMedIA, Imperial College London): three pathways (input scales 1, 3 and 5), 5 outputs (background, IPH, extra-axial haemorrhage, perilesional oedema, IVH). It is a different task from panels 1 and 2: it was trained on traumatic brain injury (CENTER-TBI and others), and its extra-axial class combines traumatic SAH, SDH and EDH. Useful for SAH after a fall, or for traumatic ICH.
+The pre-trained DeepMedic models of [biomedia-mira/blast-ct](https://github.com/biomedia-mira/blast-ct) (Monteiro, Newcombe et al., *Lancet Digit Health* 2020; University of Cambridge Division of Anaesthesia / NeuroICU and BioMedIA, Imperial College London): three pathways (input scales 1, 3 and 5), 5 outputs (background, IPH, extra-axial haemorrhage, perilesional oedema, IVH). It is a different task from SAHVAI and CLAIM: it was trained on traumatic brain injury (CENTER-TBI and others), and its extra-axial class combines traumatic SAH, SDH and EDH. Useful for SAH after a fall, or for traumatic ICH.
 
 `lib/blast.js` follows blast-ct: reorient, resample to 1 mm isotropic (SimpleITK-style linear, corner-aligned), window −15…100 HU scaled to −1…1, tile with non-overlapping 60³ output blocks (140³ edge-padded input), softmax, sum over models, argmax. **Single model** is the tool's default (`model_1`); **Ensemble of 12** matches `--ensemble`.
 
 Validation on `scan_0` from the blast-ct repository: the static ONNX re-implementation matches PyTorch exactly (max difference 0) and ONNX Runtime within 2.3e-6; the JavaScript pipeline (fp32 model) gives the same label map as the `blast-ct` command line in all but **2 of 6.0 M voxels** (IPH 48.0 mL, EAH 23.7 mL, oedema 62.7 mL, IVH 0.3 mL). The fp16 files used on the site change 0.01% of voxels on test tiles. 60³ output tiles give identical labels to the tool's 30³ tiles.
 
-## Panel 4: RHUH SAH dataset (Cepeda & García-García)
+## RHUH SAH dataset (Cepeda & García-García) — `rhuh.html`
 
-[Zenodo 8228847](https://doi.org/10.5281/zenodo.8228847): non-contrast CT scans of aneurysmal SAH from Río Hortega University Hospital (Valladolid, Spain) with expert manual bleeding masks, NIfTI, CC BY 4.0, distributed as one 649 MB RAR archive. Browsers cannot read RAR, so the user extracts it and drops (or chooses) the CT and mask of one case; the panel runs the chosen model and reports any-blood Dice and volumes against the expert mask, with the mask outlined in white. No RHUH data are hosted here.
+[Zenodo 8228847](https://doi.org/10.5281/zenodo.8228847): non-contrast CT scans of aneurysmal SAH from Río Hortega University Hospital (Valladolid, Spain) with expert manual bleeding masks, NIfTI, CC BY 4.0, distributed as one 649 MB RAR archive. Browsers cannot read RAR, so the user extracts it and drops (or chooses) the CT and mask of one case; the page runs the chosen model and reports any-blood Dice and volumes against the expert mask, with the mask outlined in white. No RHUH data are hosted here.
 
 The dataset description lists anonymisation, resampling, skull stripping and intensity normalisation among its preprocessing. The three models expect Hounsfield units and the whole head, so the page checks the intensity range and warns when a volume does not look like HU.
 

@@ -1,6 +1,6 @@
 # Deploying SAHVAI Web inside an institution (e.g. Mayo Clinic)
 
-Version 2.0 · 22 October 2026 (four panels: SAHVAI, CLAIM, BLAST-CT, RHUH dataset) · source: `sahvai-web/` in github.com/sahvai-lab/SAHVAI-Calculator
+Version 2.1 · 25 October 2026 (four pages: SAHVAI / BrainHemoAI, CLAIM, BLAST-CT, RHUH dataset) · source: `sahvai-web/` in github.com/sahvai-lab/SAHVAI-Calculator
 
 > **Research and education use only.** Not a medical device, not FDA-cleared, and checked against the original implementations on public demo cases only. Deploy for research under your institution's AI-governance and IRB processes; do not use results for patient care.
 
@@ -8,11 +8,12 @@ Version 2.0 · 22 October 2026 (four panels: SAHVAI, CLAIM, BLAST-CT, RHUH datas
 
 | path | contents |
 |---|---|
-| `index.html`, `app.js`, `worker.js`, `style.css` | the web app (static files, no build step) |
+| `index.html`, `app.js`, `worker.js`, `style.css` | the SAHVAI (BrainHemoAI) page (static files, no build step) |
+| `claim.html`, `blast.html`, `rhuh.html`, `app-models.js`, `worker-models.js`, `style-models.css` | the CLAIM, BLAST-CT and RHUH dataset pages (`tools/make_pages.py` regenerates the HTML) |
 | `lib/` | DICOM / NIfTI / NRRD readers, resampling, brain extraction, UNet orchestration, post-processing |
-| `models/` | panel 1: the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
-| `models/blast/` | panel 3: the 12 BLAST-CT DeepMedic models (2.1 MB each, float16; Apache-2.0) |
-| `models/claim/` | panel 2: the CLAIM nnU-Net 2D model in two parts (92.7 MB, float16; CC BY-NC 4.0) |
+| `models/` | SAHVAI: the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
+| `models/blast/` | BLAST-CT: the 12 BLAST-CT DeepMedic models (2.1 MB each, float16; Apache-2.0) |
+| `models/claim/` | CLAIM: the CLAIM nnU-Net 2D model in two parts (92.7 MB, float16; CC BY-NC 4.0) |
 | `vendor/` | ONNX Runtime Web 1.30 and DICOM image codecs (all local) |
 | `coi-serviceworker.js` | enables multi-threading when the server cannot send the headers below |
 | `demo/` | public demo cases: BrainHemoAI `head.nrrd`, three BHSD cases from the CLAIM repository with labels, BLAST-CT `scan_0` with labels |
@@ -29,7 +30,7 @@ cd sahvai-web
 python3 serve.py            # then open http://localhost:8000/ in Chrome or Edge
 ```
 
-Expected demo results: panel 1 **Try the demo case** SAH ≈ 77.6 mL, IPH 0 mL, IVH ≈ 2.7 mL; panel 3 **Try the demo case (TBI)** with the single model IPH ≈ 48.0 mL, EAH ≈ 23.7 mL, oedema ≈ 62.7 mL, IVH ≈ 0.3 mL (as the `blast-ct` command line); panel 2 **Demo: BHSD case 1** (exact mode) SAH ≈ 20.6 mL, IVH ≈ 0.9 mL, ventricles ≈ 96 mL, any-blood Dice 0.44 against the BHSD labels (nnU-Net itself: 0.45).
+Expected demo results: SAHVAI page **Try the demo case** SAH ≈ 77.6 mL, IPH 0 mL, IVH ≈ 2.7 mL; BLAST-CT page **Try the demo case (TBI)** with the single model IPH ≈ 48.0 mL, EAH ≈ 23.7 mL, oedema ≈ 62.7 mL, IVH ≈ 0.3 mL (as the `blast-ct` command line); CLAIM page **Demo: BHSD case 1** (exact mode) SAH ≈ 20.6 mL, IVH ≈ 0.9 mL, ventricles ≈ 96 mL, any-blood Dice 0.44 against the BHSD labels (nnU-Net itself: 0.45).
 
 ## 3. Host it on an internal web server
 
@@ -84,8 +85,8 @@ Client requirements: desktop Chrome or Edge (current), 8 GB RAM or more. Measure
 ## 6. Before research use at Mayo
 
 - **Governance:** register through the institutional AI review and IRB processes for research use on patient images; keep outputs out of the clinical record.
-- **Model weights:** panel 1 converted from BrainHemoAI (Hu et al., *NeuroImage* 2023), MIT License with the permission of Dr Ping Hu and the BrainHemoAI group; panel 2 CLAIM (Kiewitz et al., *Front Neurol* 2024), **CC BY-NC 4.0, non-commercial only**; panel 3 BLAST-CT (Monteiro et al., *Lancet Digit Health* 2020), Apache-2.0. See `LICENSE.md`. BLAST-CT was trained on traumatic brain injury and CLAIM on aneurysmal SAH at one centre; neither has been validated at Mayo.
-- **RHUH dataset (panel 4):** CC BY 4.0, downloaded by the user from Zenodo; not redistributed in this package.
+- **Model weights:** SAHVAI converted from BrainHemoAI (Hu et al., *NeuroImage* 2023), MIT License with the permission of Dr Ping Hu and the BrainHemoAI group;  CLAIM (Kiewitz et al., *Front Neurol* 2024), **CC BY-NC 4.0, non-commercial only**; BLAST-CT (Monteiro et al., *Lancet Digit Health* 2020), Apache-2.0. See `LICENSE.md`. BLAST-CT was trained on traumatic brain injury and CLAIM on aneurysmal SAH at one centre; neither has been validated at Mayo.
+- **RHUH dataset page:** CC BY 4.0, downloaded by the user from Zenodo; not redistributed in this package.
 - **Code licence:** the app code is CC BY-NC-SA 4.0 (derived from radar-web): **non-commercial**, share-alike. Commercial use (e.g. inside a product) would need a clean-room reimplementation of the derived files or a licence from their authors.
 - **Local validation plan (suggested):** run a SAHVAI cohort sample (e.g. 50–100 aneurysmal SAH scans across scanners) against manual segmentations and ABC/2 volumes; report Dice and ICC per compartment; review the brain-outline QC on every case; note failure modes (post-craniotomy or craniectomy, clip or coil artifact, EVD tracts, motion, contrast given). The AI "SAH" volume includes all subarachnoid blood, not only the five cisterns of the ABC/2 SAHV used by the eSAH score.
 

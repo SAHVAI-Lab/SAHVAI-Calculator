@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLAST-CT TBI lesion segmentation in the browser</title>
+<meta name="description" content="The traumatic brain injury lesion model of the University of Cambridge and Imperial College London (Monteiro et al., Lancet Digit Health 2020): intraparenchymal and extra-axial haemorrhage, perilesional oedema and intraventricular haemorrhage on non-contrast head CT. Use it for SAH after a fall or for traumatic ICH. Everything runs on this computer. Research and education use only.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style-models.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body data-page="blast">
+<header class="top">
+  <div class="wrap">
+    <h1>BLAST-CT <span>in the browser</span></h1>
+    <p>The traumatic brain injury lesion model of the University of Cambridge and Imperial College London (Monteiro et al., <i>Lancet Digit Health</i> 2020): intraparenchymal and extra-axial haemorrhage, perilesional oedema and intraventricular haemorrhage on non-contrast head CT. Use it for SAH after a fall or for traumatic ICH. Everything runs on this computer.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html" aria-current="page">BLAST-CT</a><a href="rhuh.html">RHUH dataset</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research and education use only</h2>
+      <p>A research demonstration, not a medical device. This model is not validated or approved for clinical use here; do not use it for diagnosis, treatment or any other clinical decision. Segmentations can be wrong; always review them against the images.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this computer</h2>
+      <p>Files are read and processed inside this browser tab on your GPU or CPU. No image data or results are uploaded. Only the page, the model files and the demo cases are downloaded, and the model is cached for later visits.</p>
+    </div>
+    <div class="note">
+      <h2>What you need</h2>
+      <ul>
+        <li>A recent desktop Chrome or Edge (Firefox and Safari may work on the CPU).</li>
+        <li>8 GB RAM or more. WebGPU is fastest; on the CPU a scan takes one to several minutes.</li>
+        <li>A <b>non-contrast axial head CT</b> in Hounsfield units.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section class="panel " id="panel-blast" aria-labelledby="h-blast">
+    <header class="phead">
+      <span class="num">B</span>
+      <div><h2 id="h-blast">BLAST-CT <span>Cambridge &amp; Imperial · traumatic brain injury lesions</span></h2><p class="sub">Four lesion classes from the CENTER-TBI work: intraparenchymal haemorrhage, extra-axial haemorrhage, perilesional oedema and intraventricular haemorrhage. Use it for SAH after a fall (traumatic SAH is part of the extra-axial class) or for traumatic ICH.</p></div>
+      <span class="origin">Menon, Newcombe, Glocker et al. · University of Cambridge NeuroICU · Imperial College London</span>
+    </header>
+    <div class="opts">
+      <div class="group" role="radiogroup" aria-label="BLAST-CT models"><span class="lbl">Models</span>
+        <label><input type="radio" name="blast-ens" value="1" checked> Single model (blast-ct default)</label>
+        <label><input type="radio" name="blast-ens" value="12"> Ensemble of 12 (as <code>--ensemble</code>, 12× slower)</label></div>
+      <span class="small">About 2 MB per model, cached.</span>
+    </div>
+    <div class="note small-note">Not the same task as SAHVAI and CLAIM: <b>EAH</b> combines subarachnoid, subdural and extradural blood, and the model was trained on traumatic brain injury, not aneurysmal SAH.</div>
+    <div class="drop" tabindex="0">
+      <p class="big"><b>Drop a head CT here</b></p>
+      <p class="hint">A zip of a DICOM study, a DICOM folder, loose DICOM files, a .nii / .nii.gz or a .nrrd volume. The scan is resampled to 1 mm isotropic, as in the blast-ct tool.</p>
+      <div class="buttons">
+        <label class="btn">Choose file(s)<input class="f-files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label>
+        <label class="btn">Choose folder<input class="f-folder" type="file" webkitdirectory></label>
+        <button class="btn ghost" type="button" data-demo="0">Try the demo case (TBI)</button>
+      </div>
+      <div class="gtrow"><label class="btn small ghost">Optional: reference labels (.nii.gz)<input class="f-gt" type="file" accept=".nii,.gz,.nrrd"></label>
+      <span class="small">reference: <b class="gtname">none</b> · must share the scan's geometry; Dice is reported per class</span></div>
+    </div>
+    <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
+    <div class="results" hidden>
+      <div class="vols"></div>
+      <div class="warnbox" hidden></div>
+      <div class="cmp" hidden></div>
+      <div class="viewerhost viewer"></div>
+      <div class="details"></div>
+    </div>
+    <div class="cite"><h3>Citation, licence and disclaimer</h3>
+    <p><b>Model.</b> Monteiro M, Newcombe VFJ, Mathieu F, Adatia K, Kamnitsas K, Ferrante E, Das T, Whitehouse D, Rueckert D, Menon DK, Glocker B. Multiclass semantic segmentation and quantification of traumatic brain injury lesions on head CT using deep learning: an algorithm development and multicentre validation study. <i>Lancet Digit Health</i> 2020;2(6):e314–e322. <a href="https://doi.org/10.1016/S2589-7500(20)30085-6">doi:10.1016/S2589-7500(20)30085-6</a></p>
+    <p><b>Code and weights.</b> <a href="https://github.com/biomedia-mira/blast-ct">github.com/biomedia-mira/blast-ct</a> (BioMedIA, Imperial College London, with the University of Cambridge Division of Anaesthesia), <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>, Copyright 2020 Imperial College London. The 12 pre-trained DeepMedic models are converted to ONNX (fp16) without retraining. Architecture: Kamnitsas K, Ledig C, Newcombe VFJ, et al. <i>Med Image Anal</i> 2017;36:61–78. The software "is not intended for clinical use" (blast-ct README). Demo: <code>scan_0</code> and its label map from the blast-ct repository.</p>
+    <p><b>How it runs here.</b> As blast-ct: reorientation, 1 mm isotropic linear resampling (SimpleITK-style), window −15 to 100 HU scaled to −1…1, three-pathway DeepMedic over tiles, softmax averaged over the chosen models, argmax. Output tiles of 60³ give the same labels as the tool's 30³ tiles (checked: 0 voxels differ).</p>
+    <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+</main>
+
+<footer class="wrap">
+  <p><b>Research and education use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p><b>Acknowledgements.</b> We thank the BLAST-CT authors at the University of Cambridge and Imperial College London for publishing their code and models (<a href="LICENSE.md#blast-ct-apache-20">Apache-2.0</a>). Inclusion here does not imply endorsement of this site by these groups.</p>
+  <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0), which runs <a href="https://doi.org/10.1126/science.aec6129">RADAR</a> (Zhang, Ding et al., Science 2026). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app-models.js"></script>
+</body>
+</html>

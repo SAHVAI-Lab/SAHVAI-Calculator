@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLAIM aSAH segmentation in the browser</title>
+<meta name="description" content="The multiclass aneurysmal SAH model of the CLAIM group at Charité Berlin (Kiewitz et al., Front Neurol 2024): SAH, intraventricular hemorrhage, ventricles, intracerebral hemorrhage, aneurysm and subdural hematoma on non-contrast head CT. Everything runs on this computer. Research and education use only.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style-models.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body data-page="claim">
+<header class="top">
+  <div class="wrap">
+    <h1>CLAIM aSAH <span>in the browser</span></h1>
+    <p>The multiclass aneurysmal SAH model of the CLAIM group at Charité Berlin (Kiewitz et al., <i>Front Neurol</i> 2024): SAH, intraventricular hemorrhage, ventricles, intracerebral hemorrhage, aneurysm and subdural hematoma on non-contrast head CT. Everything runs on this computer.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html" aria-current="page">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="rhuh.html">RHUH dataset</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research and education use only</h2>
+      <p>A research demonstration, not a medical device. This model is not validated or approved for clinical use here; do not use it for diagnosis, treatment or any other clinical decision. Segmentations can be wrong; always review them against the images.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this computer</h2>
+      <p>Files are read and processed inside this browser tab on your GPU or CPU. No image data or results are uploaded. Only the page, the model files and the demo cases are downloaded, and the model is cached for later visits.</p>
+    </div>
+    <div class="note">
+      <h2>What you need</h2>
+      <ul>
+        <li>A recent desktop Chrome or Edge (Firefox and Safari may work on the CPU).</li>
+        <li>8 GB RAM or more. WebGPU is fastest; on the CPU a scan takes one to several minutes.</li>
+        <li>A <b>non-contrast axial head CT</b> in Hounsfield units.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section class="panel " id="panel-claim" aria-labelledby="h-claim">
+    <header class="phead">
+      <span class="num">C</span>
+      <div><h2 id="h-claim">CLAIM aSAH <span>Charité Berlin · nnU-Net multiclass</span></h2><p class="sub">Six classes on non-contrast CT after aneurysmal SAH: SAH, intraventricular hemorrhage, ventricles, intracerebral hemorrhage, aneurysm and subdural hematoma.</p></div>
+      <span class="origin">CLAIM · Charité Lab for AI in Medicine, Berlin</span>
+    </header>
+    <div class="pending note warn" hidden><b>CLAIM model files not found.</b> This copy of SAHVAI Web has no <code>models/claim/</code> folder; convert the CC BY-NC 4.0 weights from Zenodo with <code>tools/claim_export.py</code> to enable this panel.</div>
+    <div class="opts">
+      <div class="group" role="radiogroup" aria-label="CLAIM inference mode"><span class="lbl">Inference</span>
+        <label title="The nnU-Net sliding window restricted to the skull plus 8 mm: about half the network passes, small differences at tile edges"><input type="radio" name="claim-mode" value="fast"> Fast (head region only, approximate)</label>
+        <label title="nnU-Net sliding window with Gaussian weighting, as nnUNetv2_predict"><input type="radio" name="claim-mode" value="exact" checked> Exact nnU-Net sliding window (default)</label></div>
+      <label><input class="mirror" type="checkbox"> Mirroring (test-time augmentation, 4× slower)</label>
+      <span class="small">2D model, 92.7 MB download, cached after the first run.</span>
+    </div>
+    <div class="drop" tabindex="0">
+      <p class="big"><b>Drop a head CT here</b></p>
+      <p class="hint">A zip of a DICOM study, a DICOM folder, loose DICOM files, a .nii / .nii.gz or a .nrrd volume. The 2D model works slice by slice at 0.445 mm in plane; it was trained on 5.5 to 6.5 mm slices, so thin slices are averaged to 5 mm. The demo cases include the expert labels, so Dice is shown.</p>
+      <div class="buttons">
+        <label class="btn">Choose file(s)<input class="f-files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label>
+        <label class="btn">Choose folder<input class="f-folder" type="file" webkitdirectory></label>
+        <button class="btn ghost" type="button" data-demo="0">Demo: BHSD case 1</button><button class="btn ghost" type="button" data-demo="1">Demo: BHSD case 2</button><button class="btn ghost" type="button" data-demo="2">Demo: BHSD case 3</button>
+      </div>
+      <div class="gtrow"><label class="btn small ghost">Optional: reference labels (.nii.gz)<input class="f-gt" type="file" accept=".nii,.gz,.nrrd"></label>
+      <span class="small">reference: <b class="gtname">none</b> · must share the scan's geometry; Dice is reported per class</span></div>
+    </div>
+    <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
+    <div class="results" hidden>
+      <div class="vols"></div>
+      <div class="warnbox" hidden></div>
+      <div class="cmp" hidden></div>
+      <div class="viewerhost viewer"></div>
+      <div class="details"></div>
+    </div>
+    <div class="cite"><h3>Citation, licence and disclaimer</h3>
+    <p><b>Model.</b> Kiewitz J, Aydin OU, Hilbert A, Gultom M, Nouri A, Khalil AA, Vajkoczy P, Tanioka S, Ishida F, Dengler NF, Frey D. Deep learning-based multiclass segmentation in aneurysmal subarachnoid hemorrhage. <i>Front Neurol</i> 2024;15:1490216. <a href="https://doi.org/10.3389/fneur.2024.1490216">doi:10.3389/fneur.2024.1490216</a> (preprint: medRxiv <a href="https://doi.org/10.1101/2024.06.24.24309431">2024.06.24.24309431</a>)</p>
+    <p><b>Code and weights.</b> <a href="https://claim.charite.de/en/projects/subarachnoid_hemorrhage_segmentation">CLAIM project page</a> · <a href="https://github.com/claim-berlin/aSAH-multiclass-segmentation">github.com/claim-berlin/aSAH-multiclass-segmentation</a> · weights on Zenodo <a href="https://doi.org/10.5281/zenodo.12579491">doi:10.5281/zenodo.12579491</a>. Licensed <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a> (attribution, non-commercial use only); the nnU-Net 2D network is converted to ONNX without changes to the weights. nnU-Net: Isensee F, Jaeger PF, Kohl SAA, Petersen J, Maier-Hein KH. <i>Nat Methods</i> 2021;18:203–211 (Apache-2.0).</p>
+    <p><b>Demo data.</b> Three cases from the BHSD dataset as distributed in the CLAIM repository: Wu B, Xie Y, Zhang Z, et al. BHSD: a 3D multi-class brain hemorrhage segmentation dataset. In: <i>Machine Learning in Medical Imaging (MLMI 2023)</i>, LNCS 14348. Springer; 2024. <a href="https://doi.org/10.1007/978-3-031-45673-2_15">doi:10.1007/978-3-031-45673-2_15</a>. The reference labels shown with the demo are those supplied with the CLAIM demo data.</p>
+    <p><b>How it runs here.</b> As nnUNetv2_predict for the 2D configuration: clip to −3…88 HU, cubic-spline resampling in plane to 0.4453 mm, z-score (mean 32.47, SD 27.41), 512 × 512 tiles with Gaussian weighting, argmax. Checked against nnUNetv2_predict with the published weights on the three demo cases (see the README). The authors report similar accuracy for their 2D and 3D models and used the 2D model for external validation.</p>
+    <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+</main>
+
+<footer class="wrap">
+  <p><b>Research and education use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p><b>Acknowledgements.</b> We thank the <a href="https://claim.charite.de/">CLAIM</a> group at Charité – Universitätsmedizin Berlin for publishing the aSAH multiclass nnU-Net weights (<a href="LICENSE.md#claim-asah-multiclass-segmentation">CC BY-NC 4.0</a>), and the BHSD authors for the demo cases. Inclusion here does not imply endorsement of this site by these groups.</p>
+  <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0), which runs <a href="https://doi.org/10.1126/science.aec6129">RADAR</a> (Zhang, Ding et al., Science 2026). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app-models.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RHUH SAH dataset in the browser</title>
+<meta name="description" content="Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp;amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM or BLAST-CT on it and compare with the expert. Everything runs on this computer. Research and education use only.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style-models.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body data-page="rhuh">
+<header class="top">
+  <div class="wrap">
+    <h1>RHUH SAH dataset <span>in the browser</span></h1>
+    <p>Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM or BLAST-CT on it and compare with the expert. Everything runs on this computer.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="rhuh.html" aria-current="page">RHUH dataset</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research and education use only</h2>
+      <p>A research demonstration, not a medical device. This model is not validated or approved for clinical use here; do not use it for diagnosis, treatment or any other clinical decision. Segmentations can be wrong; always review them against the images.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this computer</h2>
+      <p>Files are read and processed inside this browser tab on your GPU or CPU. No image data or results are uploaded. Only the page, the model files and the demo cases are downloaded, and the model is cached for later visits.</p>
+    </div>
+    <div class="note">
+      <h2>What you need</h2>
+      <ul>
+        <li>A recent desktop Chrome or Edge (Firefox and Safari may work on the CPU).</li>
+        <li>8 GB RAM or more. WebGPU is fastest; on the CPU a scan takes one to several minutes.</li>
+        <li>A <b>non-contrast axial head CT</b> in Hounsfield units.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section class="panel dataset" id="panel-rhuh" aria-labelledby="h-rhuh">
+    <header class="phead">
+      <span class="num">R</span>
+      <div><h2 id="h-rhuh">RHUH SAH dataset <span>Cepeda &amp; García-García · Valladolid, Spain</span></h2><p class="sub">Open non-contrast CT scans of aneurysmal SAH with expert manual bleeding masks. Load one case and its mask, run any of the three models on it and compare with the expert segmentation.</p></div>
+      <span class="origin">Río Hortega University Hospital · Zenodo</span>
+    </header>
+    <ol class="steps">
+      <li>Download <code>subarachnoid_hemorrhage_rhuh.rar</code> (649 MB) from <a href="https://zenodo.org/records/8228847">Zenodo record 8228847</a> and extract it (browsers cannot open RAR archives).</li>
+      <li>Drop the two NIfTI files of one case here (the CT and its mask), or choose them below.</li>
+      <li>Pick a model and press <b>Run</b>. The expert mask is drawn in white and Dice and volumes are compared as "any blood".</li>
+    </ol>
+    <div class="drop" tabindex="0">
+      <p class="big"><b>Drop one RHUH case here</b> <span class="small">(CT + expert mask, .nii / .nii.gz)</span></p>
+      <div class="buttons">
+        <label class="btn ghost">CT volume<input class="f-ct" type="file" accept=".nii,.gz,.nrrd"></label>
+        <label class="btn ghost">Expert mask<input class="f-mask" type="file" accept=".nii,.gz,.nrrd"></label>
+      </div>
+      <p class="small">CT: <b class="ctname">none</b> · mask: <b class="maskname">none</b></p>
+      <div class="buttons">
+        <label class="lbl" for="rhuh-model">Model</label>
+        <select class="model" id="rhuh-model">
+          <option value="sahvai">1 · SAHVAI (BrainHemoAI)</option>
+          <option value="claim">2 · CLAIM nnU-Net</option>
+          <option value="blast">3 · BLAST-CT</option>
+        </select>
+        <button class="btn run" type="button">Run</button>
+      </div>
+    </div>
+    <div class="note small-note">The dataset description lists anonymisation, resampling, skull stripping and intensity normalisation among its preprocessing. The three models expect raw Hounsfield units and the full head, so the page checks the intensity range and warns when a volume does not look like HU; skull-stripped input can also affect the brain extraction of SAHVAI (BrainHemoAI).</div>
+    <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
+    <div class="results" hidden>
+      <div class="vols"></div>
+      <div class="warnbox" hidden></div>
+      <div class="cmp" hidden></div>
+      <div class="viewerhost viewer"></div>
+      <div class="details"></div>
+    </div>
+    <div class="cite"><h3>Citation, licence and disclaimer</h3>
+    <p><b>Dataset.</b> Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation [data set]. Zenodo; 2023. Version 1. <a href="https://doi.org/10.5281/zenodo.8228847">doi:10.5281/zenodo.8228847</a>. Licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Río Hortega University Hospital, Valladolid, Spain.</p>
+    <p><b>Related work by the dataset authors.</b> García-García S, Cepeda S, Müller D, Mosteiro A, Torné R, Agudo S, de la Torre N, Arrese I, Sarabia R. Mortality prediction of patients with subarachnoid hemorrhage using a deep learning model based on an initial brain CT scan. <i>Brain Sci</i> 2024;14(1):10. <a href="https://doi.org/10.3390/brainsci14010010">doi:10.3390/brainsci14010010</a> · García-García S, Cepeda S, Arrese I, Sarabia R. A fully automated pipeline using Swin transformers for deep learning-based blood segmentation on head computed tomography scans after aneurysmal subarachnoid hemorrhage. <i>World Neurosurg</i> 2024. <a href="https://doi.org/10.1016/j.wneu.2024.07.216">doi:10.1016/j.wneu.2024.07.216</a> · Code: <a href="https://github.com/smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction">smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction</a> (Academic Non-Commercial Source Code License; their Swin UNETR weights are not distributed and are not run here).</p>
+    <p>Data you drop here stays in this browser. The comparison is between a public research dataset and research models; it is not a validation of any model for clinical use.</p>
+    <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+</main>
+
+<footer class="wrap">
+  <p><b>Research and education use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p><b>Acknowledgements.</b> We thank Dr Santiago Cepeda and Dr Sergio García-García for the RHUH dataset (<a href="LICENSE.md#rhuh-dataset">CC BY 4.0</a>), and the BrainHemoAI, CLAIM and BLAST-CT groups for the models it can be compared with. Inclusion here does not imply endorsement of this site by these groups.</p>
+  <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0), which runs <a href="https://doi.org/10.1126/science.aec6129">RADAR</a> (Zhang, Ding et al., Science 2026). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app-models.js"></script>
+</body>
+</html>
