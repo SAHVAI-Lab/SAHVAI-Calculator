@@ -201,7 +201,8 @@ document.querySelectorAll('#panel-sahvai input[name=align]').forEach(el => el.ad
 // ---------- the RHUH dataset panel: a case from Cepeda & Garcia-Garcia (Zenodo 8228847) + its expert mask ----------
 class DatasetPanel extends Panel {
   constructor() {
-    super({ id: 'rhuh', model: 'sahvai', title: 'RHUH dataset', prefix: 'rhuh-sahvai', demos: [] });
+    super({ id: 'rhuh', model: 'sahvai', title: 'RHUH dataset', prefix: 'rhuh-sahvai',
+      demos: ['001', '002', '003'].map(k => ({ url: `demo/rhuh/sah_rhuh_${k}_ct.nii.gz`, gt: `demo/rhuh/sah_rhuh_${k}_seg.nii.gz`, name: `RHUH case ${k} (Cepeda & García-García, CC BY 4.0)` })) });
     const q = this.q;
     this.ct = null; this.mask = null;
     const pick = (sel, key, out) => { q(sel).onchange = e => { this[key] = e.target.files[0] || null; q(out).textContent = this[key] ? this[key].name : 'none'; e.target.value = ''; }; };
@@ -226,10 +227,15 @@ class DatasetPanel extends Panel {
     }
     if (this.ct) this.setStage(`Case ready: ${this.ct.name}${this.mask ? ` with expert mask ${this.mask.name}` : ' (no expert mask chosen)'}. Pick a model and press Run.`, 0);
   }
+  modelOpts() { return this.model === 'claim' ? { mode: 'exact', mirror: false } : this.model === 'blast' ? { ensemble: false } : { angle: null }; }
+  runDemo(d) {   // a hosted RHUH case with its expert mask, through the chosen model
+    this.setModel(this.q('select.model').value);
+    if (submit(this, { model: this.model, demo: d.url, demoName: d.name, gt: d.gt, gtScheme: 'binary', opts: this.modelOpts(), label: `${d.name} with ${this.model}` })) this.begin();
+  }
   go() {
     if (!this.ct) { this.setStage('Choose or drop the case CT first.', 0); return; }
     this.setModel(this.q('select.model').value);
-    const opts = this.model === 'claim' ? { mode: 'exact', mirror: false } : this.model === 'blast' ? { ensemble: false } : { angle: null };
+    const opts = this.modelOpts();
     if (submit(this, { model: this.model, files: [this.ct], gt: this.mask, gtScheme: 'binary', opts, label: `RHUH case ${this.ct.name}${this.mask ? ` + ${this.mask.name}` : ''} with ${this.model}` })) this.begin();
   }
 }

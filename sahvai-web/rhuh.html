@@ -75,8 +75,14 @@
         </select>
         <button class="btn run" type="button">Run</button>
       </div>
+      <div class="buttons">
+        <span class="small">or try a hosted RHUH case with its expert mask:</span>
+        <button class="btn ghost" type="button" data-demo="0">RHUH case 001</button>
+        <button class="btn ghost" type="button" data-demo="1">RHUH case 002</button>
+        <button class="btn ghost" type="button" data-demo="2">RHUH case 003</button>
+      </div>
     </div>
-    <div class="note small-note">The dataset description lists anonymisation, resampling, skull stripping and intensity normalisation among its preprocessing. The three models expect raw Hounsfield units and the full head, so the page checks the intensity range and warns when a volume does not look like HU; skull-stripped input can also affect the brain extraction of SAHVAI (BrainHemoAI).</div>
+    <div class="note small-note"><b>About these scans.</b> RHUH volumes are registered to the MNI template (193 × 229 × 193 at 1 mm) and skull-stripped: brain only, background 0, intensities close to Hounsfield units. The three models were trained on whole-head CT, so the page detects this, sets the background to air (−1000 HU) and, for SAHVAI, takes the brain mask from the scan. Treat the results as approximate. On cases 001–003 the any-blood Dice against the expert mask was 0.65, 0.27 and 0.62 for SAHVAI (BrainHemoAI), 0.12, 0.02 and 0.37 for CLAIM, and 0.22 for BLAST-CT (case 001), so SAHVAI is the default here.</div>
     <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
     <div class="results" hidden>
       <div class="vols"></div>
@@ -86,7 +92,7 @@
       <div class="details"></div>
     </div>
     <div class="cite"><h3>Citation, licence and disclaimer</h3>
-    <p><b>Dataset.</b> Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation [data set]. Zenodo; 2023. Version 1. <a href="https://doi.org/10.5281/zenodo.8228847">doi:10.5281/zenodo.8228847</a>. Licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Río Hortega University Hospital, Valladolid, Spain.</p>
+    <p><b>Dataset.</b> Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation [data set]. Zenodo; 2023. Version 1. <a href="https://doi.org/10.5281/zenodo.8228847">doi:10.5281/zenodo.8228847</a>. Licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Río Hortega University Hospital, Valladolid, Spain. Cases 001–003 are hosted here unchanged as demos, under the same licence.</p>
     <p><b>Related work by the dataset authors.</b> García-García S, Cepeda S, Müller D, Mosteiro A, Torné R, Agudo S, de la Torre N, Arrese I, Sarabia R. Mortality prediction of patients with subarachnoid hemorrhage using a deep learning model based on an initial brain CT scan. <i>Brain Sci</i> 2024;14(1):10. <a href="https://doi.org/10.3390/brainsci14010010">doi:10.3390/brainsci14010010</a> · García-García S, Cepeda S, Arrese I, Sarabia R. A fully automated pipeline using Swin transformers for deep learning-based blood segmentation on head computed tomography scans after aneurysmal subarachnoid hemorrhage. <i>World Neurosurg</i> 2024. <a href="https://doi.org/10.1016/j.wneu.2024.07.216">doi:10.1016/j.wneu.2024.07.216</a> · Code: <a href="https://github.com/smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction">smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction</a> (Academic Non-Commercial Source Code License; their Swin UNETR weights are not distributed and are not run here).</p>
     <p>Data you drop here stays in this browser. The comparison is between a public research dataset and research models; it is not a validation of any model for clinical use.</p>
     <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>

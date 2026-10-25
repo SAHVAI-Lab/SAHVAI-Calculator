@@ -86,7 +86,17 @@ Validation on `scan_0` from the blast-ct repository: the static ONNX re-implemen
 
 [Zenodo 8228847](https://doi.org/10.5281/zenodo.8228847): non-contrast CT scans of aneurysmal SAH from Río Hortega University Hospital (Valladolid, Spain) with expert manual bleeding masks, NIfTI, CC BY 4.0, distributed as one 649 MB RAR archive. Browsers cannot read RAR, so the user extracts it and drops (or chooses) the CT and mask of one case; the page runs the chosen model and reports any-blood Dice and volumes against the expert mask, with the mask outlined in white. No RHUH data are hosted here.
 
-The dataset description lists anonymisation, resampling, skull stripping and intensity normalisation among its preprocessing. The three models expect Hounsfield units and the whole head, so the page checks the intensity range and warns when a volume does not look like HU.
+Format (checked on the downloaded archive, MD5 a67bf358ebb326f156071864c318ab42): 100 cases `sah_rhuh_NNN/sah_rhuh_NNN_ct.nii.gz` + `_seg.nii.gz` (binary expert mask), registered to MNI space (193 × 229 × 193, 1 mm, RAS), skull-stripped with background exactly 0 and intensities close to HU. `lib/stripped.js` detects such volumes (many exact zeros, no air, no bone), sets the background to −1000 HU and, for SAHVAI, uses the non-background voxels as the brain mask. Cases 001–003 are hosted in `demo/rhuh/` (CC BY 4.0, unchanged).
+
+Any-blood Dice against the expert masks (browser pipelines, run in Node):
+
+| case | expert mL | SAHVAI (BrainHemoAI) | CLAIM (exact) | BLAST-CT (1 model) |
+|---|---|---|---|---|
+| 001 | 62.0 | 0.654 (41.1 mL) | 0.115 (18.2 mL) | 0.216 (8.8 mL) |
+| 002 | 13.3 | 0.267 (4.9 mL) | 0.017 (13.1 mL) | – |
+| 003 | 36.7 | 0.619 (48.4 mL) | 0.372 (30.0 mL) | – |
+
+CLAIM and BLAST-CT degrade badly on these skull-stripped, template-registered scans (CLAIM without the background change: 0.114 on case 001); SAHVAI with the scan's own brain mask holds up best, so it is the page default. These are three cases only.
 
 ## Requirements
 

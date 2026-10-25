@@ -12,6 +12,7 @@ import { analyse } from './lib/pipeline.js';
 import { PARTS } from './lib/unet.js';
 import { runBlast, BLAST_GRID } from './lib/blast.js';
 import { runClaim, CLAIM_GRID, CLAIM_INPUT_GRID } from './lib/claim.js';
+import { detectStripped, airBackground, brainMaskFor } from './lib/stripped.js';
 
 const base = new URL('./', import.meta.url).href;
 ort.env.wasm.wasmPaths = base + 'vendor/ort/';
@@ -177,7 +178,7 @@ function compare(model, labels, gt, scheme, sp) {
 async function runModel(model, g, S, dev, data) {
   const o = data.opts || {}, call = caller(S);
   const st = (s, f) => stage(`${s}${s.startsWith('Segmenting') ? ` · ${dev === 'webgpu' ? 'WebGPU' : 'CPU'}` : ''}`, f);
-  if (model === 'sahvai') return analyse(g, { call, log, angle: o.angle ?? null, slab: dev === 'webgpu' ? 6 : 4, stage: st });
+  if (model === 'sahvai') return analyse(g, { call, log, angle: o.angle ?? null, mask: data._stripped ? await brainMaskFor(data._vol) : null, slab: dev === 'webgpu' ? 6 : 4, stage: st });
   if (model === 'blast') return runBlast(g, { call, models: Object.keys(S), log, stage: st });
   if (model === 'claim') {
     const gi = await toGrid(data._vol, () => {}, f => stage('Preparing the network input', f), CLAIM_INPUT_GRID);
@@ -208,8 +209,10 @@ async function handle(data) {
     const names = modelFiles(model, data.opts);
     const ready = getSessions(model, names, device).catch(e => e);
     stage('Reading the scan', 0);
-    const { vol, info } = await readVolume(data);
-    data._vol = vol;
+    let { vol, info } = await readVolume(data);
+    const stripped = await detectStripped(vol);
+    if (stripped) { vol = airBackground(vol); info.skull_stripped = true; log('skull-stripped volume (background 0, no air or bone): background set to -1000 HU' + (model === 'sahvai' ? '; brain mask taken from the non-background voxels' : '')); }
+    data._vol = vol; data._stripped = stripped;
     const g = await toGrid(vol, log, f => stage('Decoding slices', f), GRID[model]);
     info.native_size = g.native.dims; info.native_spacing_mm = g.native.spacing.map(s => +s.toFixed(3));
     info.grid_size = [g.nx, g.ny, g.nz]; info.grid_spacing_mm = g.sp.map(s => +s.toFixed(3));
@@ -236,6 +239,7 @@ async function handle(data) {
       res = await runModel(model, g, S, device, data);
     }
     const warnings = [...(res.warnings || [])]; if (warnHU) warnings.unshift(warnHU);
+    if (stripped) warnings.unshift('This scan is skull-stripped (brain only, background 0), as in the RHUH dataset. The models were trained on whole-head CT, so the background was set to air (-1000 HU)' + (model === 'sahvai' ? ' and the brain mask was taken from the scan' : '') + '; treat the result as approximate.');
     const scheme = data.gtScheme || (gt && gt.max <= 1 ? 'binary' : model);
     const comparison = gt ? compare(model, res.labels, gt.labels, scheme, g.sp) : null;
     if (comparison) log(`vs reference: any-blood Dice ${comparison.blood.dice == null ? 'n/a' : comparison.blood.dice.toFixed(3)} (model ${comparison.blood.model_mL.toFixed(1)} mL, reference ${comparison.blood.reference_mL.toFixed(1)} mL)`);
