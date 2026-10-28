@@ -53,4 +53,4 @@ Copyright 2020 Imperial College London. Licensed under the Apache License, Versi
 
 ## Bundled libraries (`vendor/`)
 
-ONNX Runtime Web (MIT), jpeg-lossless-decoder-js (MIT), Cornerstone codecs CharLS / OpenJPEG / OpenJPH (MIT), coi-serviceworker (MIT). See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+ONNX Runtime Web (MIT), jpeg-lossless-decoder-js (MIT), Cornerstone codecs CharLS / OpenJPEG / OpenJPH (MIT), coi-serviceworker (MIT), three.js (MIT; 3D-4D page). See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

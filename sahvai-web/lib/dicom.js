@@ -16,6 +16,9 @@ export const SELECT_TAGS = {
   0x00180015: 'body_part', 0x0020000E: 'series_uid', 0x00200037: 'iop',
   // sahvai-web: extra tags for choosing a non-contrast head CT series
   0x00180010: 'contrast', 0x00180050: 'thickness', 0x00181210: 'kernel',
+  // sahvai-web 3D-4D: study grouping and scan dates for serial CTs (the patient ID is only compared, never shown)
+  0x0020000D: 'study_uid', 0x00080020: 'study_date', 0x00080021: 'series_date', 0x00080022: 'acq_date',
+  0x00080030: 'study_time', 0x00080031: 'series_time', 0x00080032: 'acq_time', 0x00100020: 'patient_id',
 };
 // Tags needed to place and decode a slice. All sit before the pixel data.
 export const SLICE_TAGS = {

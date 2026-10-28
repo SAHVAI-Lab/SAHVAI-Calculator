@@ -17,6 +17,12 @@ export function isAxial(iop) {
 // as one series when the first, middle and last headers agree; otherwise every
 // header in that folder is read.
 export async function pickSeries(entries, log = () => {}) {
+  const { all, opened } = await scanSeries(entries, log);
+  return chooseSeries(all, log, opened, entries.length);
+}
+
+// Read enough headers to group the files into series (folder sampling as in radar-svc).
+export async function scanSeries(entries, log = () => {}) {
   const folders = new Map(), series = new Map();
   for (const m of entries) {
     const d = m.name.slice(0, m.name.lastIndexOf('/') + 1);
@@ -43,6 +49,31 @@ export async function pickSeries(entries, log = () => {}) {
   }, 4);
   const all = [...series.values()];
   if (!all.length) throw new Error('no DICOM series found');
+  return { all, opened };
+}
+
+// sahvai-web 3D-4D: split series into studies (StudyInstanceUID, else study date and time), oldest first.
+export function groupStudies(all) {
+  const m = new Map();
+  for (const s of all) {
+    const k = s.study_uid || [s.study_date, s.study_time].filter(Boolean).join(' ') || 'study';
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(s);
+  }
+  return [...m.values()];
+}
+
+// Date and time of a series as an ISO string (acquisition, else series, else study), or null.
+export function seriesDate(s) {
+  const pick = [[s.acq_date, s.acq_time], [s.series_date, s.series_time], [s.study_date, s.study_time]].find(([d]) => /^\d{8}$/.test((d || '').trim()));
+  if (!pick) return null;
+  const d = pick[0].trim(), t = (pick[1] || '').replace(/[^0-9.]/g, '');
+  const hh = t.slice(0, 2) || '00', mm = t.slice(2, 4) || '00', ss = t.slice(4, 6) || '00';
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${hh.padEnd(2, '0')}:${mm.padEnd(2, '0')}:${ss.padEnd(2, '0')}`;
+}
+
+export function chooseSeries(all, log = () => {}, opened = 0, nfiles = 0) {
+  const entries = { length: nfiles };
   const usable = s => ['CT', ''].includes(s.modality ?? 'CT') && !/LOCALIZER/i.test(s.image_type || '') && s.files.length >= 10;
   const isHead = s => HEAD.test(s.desc || '') || HEAD.test(s.body_part || '');
   const avoid = s => AVOID.test(s.desc || '') || AVOID.test(s.kernel || '') || !!String(s.contrast || '').trim();

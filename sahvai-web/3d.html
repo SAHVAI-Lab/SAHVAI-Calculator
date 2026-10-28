@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAHVAI 3D-4D: 3D hemorrhage maps and blood volumes over time</title>
+<meta name="description" content="Rotatable 3D reconstruction of subarachnoid, intraparenchymal and intraventricular hemorrhage on non-contrast head CT, with volumes over serial scans, running entirely in the browser.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style-3d.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>SAHVAI <span>3D-4D</span></h1>
+    <p>Drop a non-contrast head CT to see its hemorrhage in 3D, with the skull removed: subarachnoid (SAH), intraparenchymal (IPH) and intraventricular (IVH) blood segmented by the Hybrid 2D/3D UNet of Hu et al. (BrainHemoAI). Drop 2&ndash;6 serial CTs of the same patient to chart SAHV, IPH, IVH and total blood over time (SAHVAI-4D). Everything runs on this computer.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research use only</h2>
+      <p>A research demonstration, not a medical device. Not validated or approved for clinical use; do not use it for diagnosis or treatment. Segmentations and 3D surfaces can be wrong; check them against the slices.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this computer</h2>
+      <p>Scans are read and segmented inside this browser tab on your GPU or CPU. Nothing is uploaded. The model (about 26 MB) is downloaded once and cached.</p>
+    </div>
+    <div class="note">
+      <h2>Serial scans (4D)</h2>
+      <ul>
+        <li>Drop several zips, folders or volumes at once, or add scans one at a time.</li>
+        <li>DICOM studies are separated and dated from their headers; NIfTI / NRRD files take a date from the file name or from the table.</li>
+        <li>Each scan takes about 30 s on WebGPU, a few minutes on the CPU.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div class="group">
+      <span class="lbl">New scans</span>
+      <label><input type="radio" name="addmode" value="add" checked> Add to timeline</label>
+      <label><input type="radio" name="addmode" value="replace"> Start over</label>
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section id="drop" class="drop" tabindex="0">
+    <p class="big"><b>Drop one head CT for a 3D map &mdash; or 2&ndash;6 serial CTs for SAHVAI-4D</b></p>
+    <p class="hint">Zips of DICOM studies, DICOM folders, loose DICOM files, .nii / .nii.gz or .nrrd volumes. From each study the axial non-contrast head series nearest 5 mm is used.</p>
+    <div class="buttons">
+      <label class="btn">Choose file(s)<input id="files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label>
+      <label class="btn">Choose folder<input id="folder" type="file" webkitdirectory></label>
+      <button id="demo" class="btn ghost" type="button">Try the demo case</button>
+      <button id="clear" class="btn ghost" type="button" hidden>Clear all scans</button>
+    </div>
+  </section>
+
+  <section id="status" class="status" hidden>
+    <div class="stage"><span id="stage">Starting</span><span id="pct"></span></div>
+    <div class="bar"><i id="bar"></i></div>
+  </section>
+
+  <section id="results" hidden>
+    <div id="strip" class="strip" aria-label="Scans" hidden></div>
+    <div id="patwarn" class="warnbox" hidden></div>
+    <div class="vols" id="vols"></div>
+    <div id="warn" class="warnbox" hidden></div>
+
+    <div class="stage3d">
+      <div class="v3d" id="v3d">
+        <canvas id="gl" aria-label="Rotatable 3D view of the brain and hemorrhage"></canvas>
+        <canvas id="triad" class="triad" width="96" height="96" aria-hidden="true"></canvas>
+        <div class="views" role="group" aria-label="View direction">
+          <button data-view="bottom" title="Axial, seen from below (radiological)">Axial</button>
+          <button data-view="top" title="Axial, seen from above">Top</button>
+          <button data-view="front" title="Coronal, seen from the front">Coronal</button>
+          <button data-view="back" title="Seen from behind">Back</button>
+          <button data-view="left" title="Sagittal, seen from the left">Left</button>
+          <button data-view="right" title="Sagittal, seen from the right">Right</button>
+        </div>
+        <div class="hud" id="hud"></div>
+        <div class="busy3d" id="busy3d" hidden>Building 3D surfaces…</div>
+        <p class="hint3d">Drag to rotate · scroll to zoom · right-drag to pan</p>
+      </div>
+      <div class="side3d">
+        <h3>Layers</h3>
+        <label class="layer"><input type="checkbox" data-layer="SAH" checked><i style="background:var(--sah)"></i>SAH <span id="lv-SAH"></span></label>
+        <label class="layer"><input type="checkbox" data-layer="IPH" checked><i style="background:var(--iph)"></i>IPH <span id="lv-IPH"></span></label>
+        <label class="layer"><input type="checkbox" data-layer="IVH" checked><i style="background:var(--ivh)"></i>IVH <span id="lv-IVH"></span></label>
+        <label class="layer"><input type="checkbox" data-layer="vent" checked><i style="background:#6f8fd0"></i>Ventricles <small>(approx.)</small></label>
+        <label class="layer"><input type="checkbox" data-layer="brain" checked><i style="background:#c9d3e6"></i>Brain <small>(skull removed)</small></label>
+        <label class="row">Brain opacity <input id="brainOp" type="range" min="0" max="60" value="16"></label>
+        <label class="row"><input id="planes" type="checkbox"> Show slice planes</label>
+        <label class="row"><input id="spin" type="checkbox"> Auto-rotate</label>
+        <div class="row btns"><button id="reset" class="btn small ghost" type="button">Reset view</button><button id="png3d" class="btn small ghost" type="button">Save image</button></div>
+        <div id="play" class="play" hidden>
+          <h3>SAHVAI-4D</h3>
+          <div class="row"><button id="playBtn" class="btn small" type="button">▶ Play</button><span id="playLbl" class="muted"></span></div>
+          <input id="tslider" type="range" min="0" max="0" value="0" aria-label="Scan in the timeline">
+          <p class="small muted">Steps through the scans in date order with the same camera. Scans are centred on the brain, not registered to each other.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mpr">
+      <div class="mprhead">
+        <h3>Slices</h3>
+        <div class="presets" role="radiogroup" aria-label="Window">
+          <label><input type="radio" name="win" value="40,80" checked> Brain</label>
+          <label><input type="radio" name="win" value="60,120"> Blood</label>
+          <label><input type="radio" name="win" value="75,215"> Subdural</label>
+        </div>
+        <label><input id="overlay" type="checkbox" checked> Overlay</label>
+        <label>Opacity <input id="opacity" type="range" min="0" max="100" value="55"></label>
+        <span class="muted small">Click a view to move the crosshair · scroll to page through it</span>
+      </div>
+      <div class="mprgrid">
+        <figure><canvas id="ax" aria-label="Axial slice"></canvas><figcaption id="axcap">Axial</figcaption></figure>
+        <figure><canvas id="co" aria-label="Coronal reformat"></canvas><figcaption id="cocap">Coronal</figcaption></figure>
+        <figure><canvas id="sa" aria-label="Sagittal reformat"></canvas><figcaption id="sacap">Sagittal</figcaption></figure>
+      </div>
+      <p class="small muted">Coronal and sagittal views are reformatted from 5 mm axial slices, so they look stepped.</p>
+    </div>
+
+    <section id="t4d" class="t4d" hidden>
+      <div class="t4dhead">
+        <h3>Blood volume over time</h3>
+        <div class="legend4d" id="legend4d"></div>
+      </div>
+      <canvas id="tchart" class="tchart" aria-label="Blood volumes by scan date"></canvas>
+      <div id="tsum" class="tsum"></div>
+      <div class="tablewrap"><table id="ttable" class="ttable"></table></div>
+      <div class="dl">
+        <button id="dlCSV" class="btn small">Volumes (.csv)</button>
+        <button id="dlJSON" class="btn small ghost">Report (.json)</button>
+        <button id="dlChart" class="btn small ghost">Chart (.png)</button>
+      </div>
+      <p class="small muted">SAH here is all subarachnoid blood found by the model; the ABC/2 SAHV of the eSAH score covers 5 cisternal spaces only. Volumes from different scanners or slice thicknesses are not strictly comparable.</p>
+    </section>
+    <div class="details" id="details"></div>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Segmentation.</b> Each scan runs through the same pipeline as SAHVAI Web: resampling to 0.5 × 0.5 × 5 mm, brain extraction and the Hybrid 2D/3D UNet of Hu et al. (BrainHemoAI weights, ONNX Runtime Web), giving SAH, IPH and IVH labels and volumes.</li>
+      <li><b>Skull removal.</b> The 3D brain is the intracranial soft tissue the pipeline already finds (−20 to 100 HU, enclosed by the skull), so bone, scalp and the scanner table never appear.</li>
+      <li><b>Surfaces.</b> Each label is smoothed lightly, the 5 mm slices are interpolated to about 1.25 mm and a marching-cubes surface is drawn with three.js. The ventricles are an approximate, HU-based context layer (CSF density deep in the brain plus IVH), not a model output. Volumes always come from the voxel labels, never from the surfaces.</li>
+      <li><b>4D.</b> Studies are separated by StudyInstanceUID and ordered by acquisition date. Volumes are plotted against date; the SAH clearance rate and a log-linear half-life are shown when there are enough dated scans.</li>
+    </ol>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p><b>Research use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p>Model: Hybrid 2D/3D UNet by Hu P, Zhou H, Yan T, et al. <a href="https://doi.org/10.1016/j.neuroimage.2023.120321">NeuroImage 2023;279:120321</a>; weights from <a href="https://github.com/BrainHemo/BrainHemoAI">BrainHemoAI</a> (MIT), used with Dr Ping Hu's permission. SAHVAI-3D/4D concept: Wirtz et al., <a href="https://doi.org/10.1161/SVIN.124.001620">Stroke Vasc Interv Neurol 2025;5:e001620</a>.</p>
+  <p>3D rendering with <a href="https://threejs.org/">three.js</a> (MIT). Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0). See <a href="LICENSE.md">licences</a>.</p>
+  <p>Also in the browser: <a href="./">SAHVAI Web</a> · <a href="claim.html">CLAIM aSAH</a> · <a href="blast.html">BLAST-CT</a> · <a href="rhuh.html">RHUH SAH dataset</a>. Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app-3d.js"></script>
+</body>
+</html>

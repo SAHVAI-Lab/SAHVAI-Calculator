@@ -2,13 +2,14 @@
 
 **https://sahvai-lab.github.io/SAHVAI-Calculator/sahvai-web/** (also the *SAHVAI Web (AI)* tab of the [SAHVAI Calculator](https://sahvai-lab.github.io/SAHVAI-Calculator/))
 
-Four pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the other three (`claim.html`, `blast.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
+Five pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the SAHVAI 3D-4D page (`3d.html`, `app-3d.js`) reuses its `worker.js`; the other three (`claim.html`, `blast.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
 
 | page | model / data | from | classes | licence |
 |---|---|---|---|---|
 | SAHVAI (`index.html`) | Hybrid 2D/3D UNet, BrainHemoAI weights (Hu et al., *NeuroImage* 2023) | BrainHemoAI | SAH, IPH, IVH | MIT (with permission) |
 | CLAIM aSAH (`claim.html`) | nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., *Front Neurol* 2024) | CLAIM, Charité Berlin | SAH, IVH, ventricles, ICH, aneurysm, SDH | CC BY-NC 4.0 |
 | BLAST-CT (`blast.html`) | DeepMedic, 1 or 12 models (Monteiro et al., *Lancet Digit Health* 2020) | Cambridge / Imperial College London | IPH, extra-axial haemorrhage, oedema, IVH (traumatic brain injury) | Apache-2.0 |
+| SAHVAI 3D-4D (`3d.html`) | the SAHVAI model above, plus 3D surfaces (three.js) and volumes over serial scans | SAHVAI Lab | SAH, IPH, IVH in 3D; volume vs date | MIT (with permission) |
 | RHUH dataset (`rhuh.html`) | open aSAH NCCT scans with expert bleeding masks (Cepeda & García-García, Zenodo 2023) | Río Hortega University Hospital, Valladolid | expert mask vs any of the three models (Dice, volumes) | CC BY 4.0 (data not hosted here) |
 
 The design follows [RADAR in the browser](https://github.com/jarrelscy/radar-web), the browser port of Alibaba DAMO Academy's RADAR abdominal CT model (Zhang, Ding et al., *Science* 2026).
@@ -97,6 +98,16 @@ Any-blood Dice against the expert masks (browser pipelines, run in Node):
 | 003 | 36.7 | 0.619 (48.4 mL) | 0.372 (30.0 mL) | – |
 
 CLAIM and BLAST-CT degrade badly on these skull-stripped, template-registered scans (CLAIM without the background change: 0.114 on case 001); SAHVAI with the scan's own brain mask holds up best, so it is the page default. These are three cases only.
+
+## SAHVAI 3D-4D — `3d.html`
+
+3D view and volume-over-time chart built on the SAHVAI (BrainHemoAI) pipeline; `app-3d.js`, `style-3d.css`, `lib/mesh.js`, `vendor/three/`. It uses `worker.js` in its multi-scan mode (`{multi: true}`), so the segmentation and volumes are identical to the SAHVAI page.
+
+- **Input.** One scan, or several at once or one after another (*Add to timeline*). DICOM uploads are split into studies by StudyInstanceUID (falling back to study date and time) and the head series of each study is chosen as on the SAHVAI page; each NIfTI / NRRD file is one scan. Scans are ordered by acquisition date (DICOM AcquisitionDate/Time, else Series, else Study), or by a date in the file name (e.g. `2026-04-12`), and every date can be edited in the table. Patient IDs are compared only to warn when scans seem to come from different patients; they are never shown or stored.
+- **3D.** Brain = the intracranial mask the pipeline already computes (skull, scalp and table removed). Each label is block-averaged to about 1 mm (blood) or 2 mm (brain), Gaussian-smoothed, interpolated from 5 mm to about 1.25 mm slices and meshed by marching cubes (outward normals from the field gradient), then drawn with three.js: SAH, IPH and IVH opaque, brain as translucent glass, an approximate ventricle layer (CSF density > 12 mm inside the brain outline plus IVH, ≥ 1 mL components near the midline; HU-based context only, not a model output). Rotate, zoom, pan, view presets in radiological orientation (axial seen from below, coronal from the front, sagittal from the left), orientation triad, slice planes, auto-rotate, PNG export.
+- **Slices.** Axial, coronal and sagittal views of the 0.5 × 0.5 × 5 mm working grid with the overlay and a linked crosshair.
+- **4D.** SAH (SAHV), IPH, IVH and total blood (mL) against scan date, with Δ total, first-to-last change, mean SAH change per day, peak total and, with three or more dated scans over at least a day, an exploratory log-linear SAH half-life. *Play* steps the 3D view through the scans with the same camera; scans are centred on the brain, not registered. Exports: CSV, JSON, chart PNG.
+- Volumes always come from the voxel labels, never from the surfaces. SAH is all subarachnoid blood found by the model, not the 5-cistern ABC/2 SAHV used by eSAH.
 
 ## Requirements
 

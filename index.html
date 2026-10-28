@@ -157,6 +157,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <button class="tab-btn" onclick="showTab('esah')">eSAH Score</button>
   <button class="tab-btn" onclick="showTab('ivh')">IVH (mod. Graeb)</button>
   <button class="tab-btn" onclick="showTab('web')">SAHVAI Web (BrainHemoAI)</button>
+  <button class="tab-btn" onclick="showTab('web3d')">SAHVAI 3D-4D</button>
   <button class="tab-btn" onclick="showTab('claim')">CLAIM aSAH (AI)</button>
   <button class="tab-btn" onclick="showTab('blast')">BLAST-CT (AI)</button>
   <button class="tab-btn" onclick="showTab('rhuh')">RHUH Dataset</button>
@@ -510,6 +511,22 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 
 <div class="card" style="padding:0;overflow:hidden;">
   <iframe id="sahvaiWebFrame" data-src="sahvai-web/" title="SAHVAI in the browser" style="width:100%;height:1400px;border:0;display:block;" loading="lazy"></iframe>
+</div>
+
+</div>
+
+<!-- ==================== SAHVAI 3D-4D TAB ==================== -->
+<div id="tab-web3d" class="tab-content">
+
+<div class="card" style="background:linear-gradient(135deg,var(--mayo-dark),var(--mayo-blue));color:#fff;text-align:center;padding:1.5rem;">
+  <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;">SAHVAI 3D-4D &mdash; rotate the hemorrhage in 3D and track it over time</h3>
+  <p style="font-size:0.85rem;opacity:0.9;max-width:860px;margin:0 auto 0.75rem;">Drop a non-contrast head CT to see SAH, IPH and IVH in a rotatable 3D brain with the skull removed, alongside axial, coronal and sagittal slices. Drop 2&ndash;6 serial CTs of the same patient to chart SAHV, IPH, IVH and total blood volume by scan date (SAHVAI-4D; Wirtz et al., <i>Stroke Vasc Interv Neurol</i> 2025). Segmentation by the BrainHemoAI Hybrid 2D/3D UNet, run locally &mdash; images are never uploaded.</p>
+  <a href="sahvai-web/3d.html" target="_blank" rel="noopener" style="display:inline-block;background:#fff;color:var(--mayo-blue);font-weight:700;font-size:0.85rem;padding:0.45rem 1.1rem;border-radius:8px;text-decoration:none;">Open full screen &#8599;</a>
+  <p style="font-size:0.72rem;opacity:0.8;margin-top:0.6rem;">Research use only &mdash; not a medical device. Embedded below, CPU mode runs on one thread; open full screen for multi-threaded CPU (WebGPU is fast in both).</p>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <iframe id="sahvai3dFrame" data-src="sahvai-web/3d.html" title="SAHVAI 3D-4D in the browser" style="width:100%;height:1800px;border:0;display:block;" loading="lazy"></iframe>
 </div>
 
 </div>
