@@ -194,6 +194,9 @@ function select(i) {
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
 // ---------------------------------------------------------------- 3D view
+const VIEWS = {
+  bottom: [0, -1, 0.002], top: [0, 1, 0.002], front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0],
+};
 const v3d = $('v3d'), glc = $('gl');
 let renderer = null, scene, camera, controls, keyLight, planes, current3d = null, radius = 90;
 try {
@@ -238,9 +241,6 @@ function loop(now) {
   drawTriad();
 }
 
-const VIEWS = {
-  bottom: [0, -1, 0.002], top: [0, 1, 0.002], front: [0, 0, 1], back: [0, 0, -1], left: [1, 0, 0], right: [-1, 0, 0],
-};
 function setView(name, animate = true) {
   if (!renderer) return;
   const r = radius / Math.sin(THREE_DEG(camera.fov) / 2) * 1.08;
@@ -252,7 +252,7 @@ function setView(name, animate = true) {
   if (a.dot(b) < -0.98) a.add(new THREE.Vector3(0.05, 0.08, 0.03)).normalize();   // avoid a 180-degree flip through zero
   tween = { a, b, r, t0: performance.now() };
 }
-const THREE_DEG = d => d * Math.PI / 180;
+function THREE_DEG(d) { return d * Math.PI / 180; }
 document.querySelectorAll('.views button').forEach(b => b.onclick = () => setView(b.dataset.view));
 $('reset').onclick = () => { if (!renderer) return; controls.target.set(0, 0, 0); setView('front'); };
 $('spin').onchange = e => { if (controls) controls.autoRotate = e.target.checked; };
