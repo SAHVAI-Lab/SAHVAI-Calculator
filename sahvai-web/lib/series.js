@@ -8,6 +8,10 @@ import { selectHeader, sliceHeader, decodeSlice, nums, tsSupported } from './dic
 export const HEAD = /head|brain|cran|skull|neuro|cerebr|hirn|cabeza|cr[aâ]ne|ncct|stroke|\bich\b|\bsah\b/i;
 export const AVOID = /bone|osso|lung|mip|mpr|vrt|3d|angio|cta|perf|post|contrast|\bc\+|w\/c|with con|subtraction|scout|topo|dose|\bsag|\bcor\b|coronal/i;
 
+// "WO CONTRAST", "W/O CON", "without contrast", "non-contrast" describe exactly the series we want: drop them before testing AVOID
+export const NEGATED = /\b(w\/o|wo|without|non[- ]?|no)\s*(iv\s*)?(con(trast)?|kontrast|km|cm)\b|\bnon[- ]?con(trast)?\b|\bnc(ct)?\b/gi;
+export const plain = d => String(d || '').replace(NEGATED, ' ');
+
 export function isAxial(iop) {
   const r = nums(iop);
   return r.length < 6 || r.some(isNaN) || Math.abs(r[0] * r[4] - r[1] * r[3]) > 0.8;
@@ -76,7 +80,7 @@ export function chooseSeries(all, log = () => {}, opened = 0, nfiles = 0) {
   const entries = { length: nfiles };
   const usable = s => ['CT', ''].includes(s.modality ?? 'CT') && !/LOCALIZER/i.test(s.image_type || '') && s.files.length >= 10;
   const isHead = s => HEAD.test(s.desc || '') || HEAD.test(s.body_part || '');
-  const avoid = s => AVOID.test(s.desc || '') || AVOID.test(s.kernel || '') || !!String(s.contrast || '').trim();
+  const avoid = s => AVOID.test(plain(s.desc)) || AVOID.test(s.kernel || '') || !!String(s.contrast || '').trim();
   const thick = s => { const t = Number(nums(s.thickness)[0]); return t > 0 ? t : NaN; };
   log(`found ${all.length} series; read ${opened} headers for ${entries.length} files:`);
   for (const s of [...all].sort((a, b) => b.files.length - a.files.length).slice(0, 30)) {
