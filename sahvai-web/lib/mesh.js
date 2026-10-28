@@ -123,7 +123,18 @@ export function centroid(mask, g) {
   return n ? [sx / n * sp[0], sy / n * sp[1], sz / n * sp[2]] : [nx * sp[0] / 2, ny * sp[1] / 2, nz * sp[2] / 2];
 }
 
-// Approximate ventricular system for context: CSF-density voxels (-5 to 18 HU) deep inside the brain
+// in-plane box mean of radius r (summed-area table), to tell CSF from noisy parenchyma
+function boxMean(a, nx, ny, r) {
+  const S = new Float64Array((nx + 1) * (ny + 1)), out = new Float32Array(nx * ny);
+  for (let y = 0; y < ny; y++) { let row = 0; for (let x = 0; x < nx; x++) { row += a[y * nx + x]; S[(y + 1) * (nx + 1) + x + 1] = S[y * (nx + 1) + x + 1] + row; } }
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) {
+    const x0 = Math.max(0, x - r), x1 = Math.min(nx, x + r + 1), y0 = Math.max(0, y - r), y1 = Math.min(ny, y + r + 1);
+    out[y * nx + x] = (S[y1 * (nx + 1) + x1] - S[y0 * (nx + 1) + x1] - S[y1 * (nx + 1) + x0] + S[y0 * (nx + 1) + x0]) / ((x1 - x0) * (y1 - y0));
+  }
+  return out;
+}
+
+// Approximate ventricular system for context: CSF-density voxels (in-plane mean -15 to 8 HU) deep inside the brain
 // (> 12 mm from its outline on that slice) plus IVH, kept as 3D components of at least 1 mL near the midline.
 // HU-based and approximate; not a segmentation from the model.
 export function ventricles(g, mask, labels) {
@@ -135,11 +146,11 @@ export function ventricles(g, mask, labels) {
     for (let p = 0; p < P; p++) if (m[p]) { any = true; const y = (p / nx) | 0, x = p - y * nx; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (!any) continue;
     const inv = new Uint8Array(P); for (let p = 0; p < P; p++) inv[p] = m[p] ? 0 : 1;
-    const d = sqdist(inv, nx, ny);
+    const d = sqdist(inv, nx, ny), sm = boxMean(hu.subarray(z * P, (z + 1) * P), nx, ny, Math.max(1, Math.round(1.7 / sp[0])));
     for (let p = 0; p < P; p++) {
       const q = z * P + p;
       if (labels[q] === 3) cand[q] = 1;
-      else if (m[p] && d[p] > r2 && hu[q] >= -5 && hu[q] <= 18) cand[q] = 1;
+      else if (m[p] && d[p] > r2 && sm[p] >= -15 && sm[p] <= 8) cand[q] = 1;
     }
   }
   // 3D components (6-neighbour)
@@ -174,17 +185,18 @@ export function buildSurfaces(g, mask, labels, { ventr = true } = {}) {
   const fBrain = Math.max(1, Math.round(2 / g.sp[0]));                            // about 2 mm blocks for the brain
   const fBlood = Math.max(1, Math.round(1 / g.sp[0]));                             // about 1 mm blocks for blood
   const uz = Math.max(1, Math.round(g.sp[2] / 1.25));                            // slices to about 1.25 mm
-  const surf = (src, test, f, sigma, iso) => toWorld(marchingCubes(upsampleZ(blur(blockField(src, g, test, f), sigma), uz), iso), c);
+  // interpolate the 5 mm slices first, then smooth in millimetres so the slab steps are rounded off
+  const surf = (src, test, f, sigma, iso) => toWorld(marchingCubes(blur(upsampleZ(blockField(src, g, test, f), uz), sigma), iso), c);
   const out = { centre: c, layers: {} };
-  out.layers.brain = surf(mask, v => v > 0, fBrain, [2.2, 2.2, 2.5], 0.5);
-  out.layers.SAH = surf(labels, v => v === 1, fBlood, [0.7, 0.7, 1.8], 0.3);
-  out.layers.IPH = surf(labels, v => v === 2, fBlood, [0.8, 0.8, 1.8], 0.35);
-  out.layers.IVH = surf(labels, v => v === 3, fBlood, [0.8, 0.8, 1.8], 0.35);
+  out.layers.brain = surf(mask, v => v > 0, fBrain, [2.2, 2.2, 2.8], 0.5);
+  out.layers.SAH = surf(labels, v => v === 1, fBlood, [0.75, 0.75, 1.9], 0.3);
+  out.layers.IPH = surf(labels, v => v === 2, fBlood, [0.9, 0.9, 1.9], 0.35);
+  out.layers.IVH = surf(labels, v => v === 3, fBlood, [0.9, 0.9, 1.9], 0.35);
   if (ventr) {
     const v = ventricles(g, mask, labels);
     let nv = 0; for (let i = 0; i < v.length; i++) nv += v[i];
     out.ventricleMl = nv * g.sp[0] * g.sp[1] * g.sp[2] / 1000;
-    out.layers.vent = surf(v, x => x > 0, fBlood, [1.0, 1.0, 2.0], 0.4);
+    out.layers.vent = surf(v, x => x > 0, fBlood, [1.2, 1.2, 2.2], 0.45);
   }
   out.ms = performance.now() - t0;
   return out;

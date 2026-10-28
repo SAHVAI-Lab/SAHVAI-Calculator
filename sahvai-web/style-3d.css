@@ -71,3 +71,4 @@
 .ttable .src { max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
 .ttable button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 1rem; }
 .ttable button:hover { color: #c01; }
+.busy3d[hidden] { display: none; }

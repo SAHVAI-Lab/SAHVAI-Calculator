@@ -637,4 +637,5 @@ if (window.parent !== window) {
 }
 
 // test hook (headless checks)
-window.__sahvai3d = { get scans() { return scans; }, get cur() { return cur; }, select, setView, order };
+window.__sahvai3d = { get scans() { return scans; }, get cur() { return cur; }, select, setView, order,
+  inject: (list, results) => { onMessage({ data: { type: 'scans', list } }); results.forEach(r => onMessage({ data: { type: 'result', ...r } })); onMessage({ data: { type: 'alldone', seconds: 0 } }); } };
