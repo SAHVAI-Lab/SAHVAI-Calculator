@@ -24,6 +24,35 @@ export function blockField(src, g, test, f = 2, pad = 2) {
   };
 }
 
+// Shape-based interpolation (Raya & Udupa 1990): a signed distance (mm, positive inside, clamped to +-R) is computed
+// on each axial slice at full in-plane resolution, then block-averaged like blockField. Interpolating it along z
+// morphs one slice's outline into the next instead of stacking 5 mm slabs. Iso level 0.
+export function sdfField(src, g, test, f = 2, pad = 2, R = 4) {
+  const { nx, ny, nz, sp } = g, P = nx * ny, bx = Math.ceil(nx / f), by = Math.ceil(ny / f);
+  const NX = bx + 2 * pad, NY = by + 2 * pad, NZ = nz + 2 * pad, data = new Float32Array(NX * NY * NZ).fill(-R);
+  const inn = new Uint8Array(P), out = new Uint8Array(P), cnt = new Float32Array(bx * by), acc = new Float32Array(bx * by);
+  for (let z = 0; z < nz; z++) {
+    let any = 0;
+    for (let p = 0; p < P; p++) { const t = test(src[z * P + p]) ? 1 : 0; inn[p] = t; out[p] = 1 - t; any |= t; }
+    if (!any) continue;
+    const dIn = sqdist(inn, nx, ny), dOut = sqdist(out, nx, ny);
+    acc.fill(0); cnt.fill(0);
+    for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) {
+      const p = y * nx + x;
+      let v = inn[p] ? (Math.sqrt(dOut[p]) - 0.5) * sp[0] : -(Math.sqrt(dIn[p]) - 0.5) * sp[0];
+      v = v > R ? R : v < -R ? -R : v;
+      const b = ((y / f) | 0) * bx + ((x / f) | 0); acc[b] += v; cnt[b]++;
+    }
+    const oz = (z + pad) * NX * NY;
+    for (let y = 0; y < by; y++) for (let x = 0; x < bx; x++) data[oz + (y + pad) * NX + x + pad] = acc[y * bx + x] / cnt[y * bx + x];
+  }
+  return {
+    data, nx: NX, ny: NY, nz: NZ,
+    sp: [sp[0] * f, sp[1] * f, sp[2]],
+    org: [((f - 1) / 2 - pad * f) * sp[0], ((f - 1) / 2 - pad * f) * sp[1], -pad * sp[2]],
+  };
+}
+
 function gauss1d(sigma) {
   const r = Math.max(1, Math.ceil(sigma * 2.5)), k = new Float32Array(2 * r + 1); let s = 0;
   for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-0.5 * (i / sigma) ** 2); s += k[i + r]; }
@@ -185,18 +214,18 @@ export function buildSurfaces(g, mask, labels, { ventr = true } = {}) {
   const fBrain = Math.max(1, Math.round(2 / g.sp[0]));                            // about 2 mm blocks for the brain
   const fBlood = Math.max(1, Math.round(1 / g.sp[0]));                             // about 1 mm blocks for blood
   const uz = Math.max(1, Math.round(g.sp[2] / 1.25));                            // slices to about 1.25 mm
-  // interpolate the 5 mm slices first, then smooth in millimetres so the slab steps are rounded off
-  const surf = (src, test, f, sigma, iso) => toWorld(marchingCubes(blur(upsampleZ(blockField(src, g, test, f), uz), sigma), iso), c);
+  const occ = (src, test, f, sigma, iso) => toWorld(marchingCubes(blur(upsampleZ(blockField(src, g, test, f), uz), sigma), iso), c);
+  const shape = (src, test, sigma) => toWorld(marchingCubes(blur(upsampleZ(sdfField(src, g, test, fBlood), uz), sigma), 0), c);
   const out = { centre: c, layers: {} };
-  out.layers.brain = surf(mask, v => v > 0, fBrain, [2.2, 2.2, 2.8], 0.5);
-  out.layers.SAH = surf(labels, v => v === 1, fBlood, [0.75, 0.75, 1.9], 0.3);
-  out.layers.IPH = surf(labels, v => v === 2, fBlood, [0.9, 0.9, 1.9], 0.35);
-  out.layers.IVH = surf(labels, v => v === 3, fBlood, [0.9, 0.9, 1.9], 0.35);
+  out.layers.brain = occ(mask, v => v > 0, fBrain, [2.2, 2.2, 2.8], 0.5);
+  out.layers.SAH = shape(labels, v => v === 1, [0.5, 0.5, 1.0]);
+  out.layers.IPH = shape(labels, v => v === 2, [0.6, 0.6, 1.0]);
+  out.layers.IVH = shape(labels, v => v === 3, [0.6, 0.6, 1.0]);
   if (ventr) {
     const v = ventricles(g, mask, labels);
     let nv = 0; for (let i = 0; i < v.length; i++) nv += v[i];
     out.ventricleMl = nv * g.sp[0] * g.sp[1] * g.sp[2] / 1000;
-    out.layers.vent = surf(v, x => x > 0, fBlood, [1.2, 1.2, 2.2], 0.45);
+    out.layers.vent = shape(v, x => x > 0, [0.9, 0.9, 1.2]);
   }
   out.ms = performance.now() - t0;
   return out;

@@ -88,6 +88,8 @@ h2 { font-size: 1rem; margin: 0 0 6px; color: var(--mayo-blue); }
 .how ol { margin: 4px 0 6px; padding-left: 20px; }
 .how li { margin-bottom: 4px; }
 .small { font-size: .8rem; color: var(--muted); }
+.btn.small { color: #fff; }
+.btn.small.ghost { color: var(--mayo-blue); }
 footer { font-size: .8rem; color: var(--muted); padding-bottom: 24px; }
 footer p { margin: 4px 0; }
 

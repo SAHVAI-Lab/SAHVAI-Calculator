@@ -3,7 +3,6 @@
 // surfaces (lib/mesh.js + three.js), orthogonal reformats and the volume-over-time chart.
 import { filesFromDataTransfer } from './lib/source.js';
 import * as THREE from './vendor/three/three-sahvai.min.js';
-import { buildSurfaces } from './lib/mesh.js';
 
 const $ = id => document.getElementById(id);
 const logEl = $('log'), t0 = performance.now();
@@ -297,17 +296,29 @@ function geom(l) {
   g.setAttribute('position', new THREE.BufferAttribute(l.pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(l.nrm, 3));
   g.computeBoundingSphere(); return g;
 }
+// surfaces are built in mesh-worker.js; one promise per scan
+let mesher = null, meshSeq = 0; const meshWait = new Map();
 function ensureSurf(s) {
-  if (s.surf) return s.surf;
-  const t = performance.now();
-  s.surf = buildSurfaces(s.res.grid, s.res.mask, s.res.labels);
-  log(`3D surfaces for ${s.name}: ${Object.entries(s.surf.layers).map(([k, l]) => `${k} ${(l.tris / 1000).toFixed(1)}k`).join(', ')} triangles, ${(performance.now() - t).toFixed(0)} ms` +
-    (s.surf.ventricleMl != null ? `; approximate ventricles ${s.surf.ventricleMl.toFixed(1)} mL` : ''));
-  return s.surf;
+  if (s.surfP) return s.surfP;
+  if (!mesher) {
+    mesher = new Worker(new URL('./mesh-worker.js', import.meta.url), { type: 'module' });
+    mesher.onmessage = ({ data }) => { const w = meshWait.get(data.id); meshWait.delete(data.id); data.error ? w.reject(new Error(data.error)) : w.resolve(data.surf); };
+  }
+  const id = ++meshSeq, t = performance.now(), r = s.res, g = r.grid;
+  s.surfP = new Promise((resolve, reject) => meshWait.set(id, { resolve, reject })).then(surf => {
+    s.surf = surf;
+    log(`3D surfaces for ${s.name}: ${Object.entries(surf.layers).map(([k, l]) => `${k} ${(l.tris / 1000).toFixed(1)}k`).join(', ')} triangles, ${(performance.now() - t).toFixed(0)} ms` +
+      (surf.ventricleMl != null ? `; approximate ventricles ${surf.ventricleMl.toFixed(1)} mL` : ''));
+    return surf;
+  });
+  mesher.postMessage({ id, grid: { nx: g.nx, ny: g.ny, nz: g.nz, sp: g.sp, hu: g.hu }, mask: r.mask, labels: r.labels });
+  return s.surfP;
 }
-function groupFor(s) {
+async function groupFor(s) {
   if (s.group) return s.group;
-  const surf = ensureSurf(s), M = mats(), G = new THREE.Group();
+  const surf = await ensureSurf(s);
+  if (s.group) return s.group;
+  const M = mats(), G = new THREE.Group();
   const add = (k, m, order) => { const l = surf.layers[k]; if (!l || !l.tris) return; const mesh = new THREE.Mesh(geom(l), m); mesh.renderOrder = order; mesh.userData.layer = k; G.add(mesh); };
   add('SAH', M.SAH, 0); add('IPH', M.IPH, 0); add('IVH', M.IVH, 0);
   add('vent', M.vent, 1); add('brain', M.brainBack, 2); add('brain', M.brain, 3);
@@ -315,24 +326,25 @@ function groupFor(s) {
 }
 function disposeSurf(s) {
   if (s.group) { s.group.traverse(o => o.geometry?.dispose()); if (scene && current3d === s.group) scene.remove(s.group); s.group = null; }
+  s.surfP = null; s.surf = null;
   if (current3d && !scans.some(x => x.group === current3d)) current3d = null;
 }
 
-function show3d(i) {
+let showSeq = 0;
+async function show3d(i) {
   if (!renderer) return;
-  const s = scans[i];
+  const s = scans[i], me = ++showSeq;
   $('busy3d').hidden = !!s.group;
-  // let the overlay paint before the (synchronous) meshing
-  setTimeout(() => {
-    const G = groupFor(s);
-    if (current3d && current3d !== G) scene.remove(current3d);
-    if (current3d !== G) scene.add(G);
-    const firstTime = !current3d;
-    current3d = G; applyLayers(); updatePlanes(); hud(); renderVols();
-    $('busy3d').hidden = true;
-    const brain = G.children.find(m => m.userData.layer === 'brain');
-    if (brain && firstTime) { radius = brain.geometry.boundingSphere.radius; setView('front', false); }
-  }, 30);
+  let G;
+  try { G = await groupFor(s); } catch (e) { log(`3D surfaces failed: ${e.message}`); $('busy3d').hidden = true; return; }
+  if (me !== showSeq || !scans.includes(s)) return;   // another scan was selected meanwhile
+  if (current3d && current3d !== G) scene.remove(current3d);
+  if (current3d !== G) scene.add(G);
+  const firstTime = !current3d;
+  current3d = G; applyLayers(); updatePlanes(); hud(); renderVols();
+  $('busy3d').hidden = true;
+  const brain = G.children.find(m => m.userData.layer === 'brain');
+  if (brain && firstTime) { radius = brain.geometry.boundingSphere.radius; setView('front', false); }
 }
 function applyLayers() {
   if (!current3d) return;
@@ -371,10 +383,10 @@ function updatePlanes() {
 }
 
 // build the other scans' surfaces in the background so 4D playback is instant
-function prebuild() {
-  const todo = scans.filter(s => s.status === 'done' && !s.group);
-  const step = () => { const s = todo.shift(); if (!s) { renderVols(); return; } if (!s.group) groupFor(s); setTimeout(step, 60); };
-  if (renderer) setTimeout(step, 200);
+async function prebuild() {
+  if (!renderer) return;
+  for (const s of scans.filter(x => x.status === 'done' && !x.group)) { try { await groupFor(s); } catch (e) { log(`3D surfaces failed: ${e.message}`); } }
+  renderVols();
 }
 
 // ---------------------------------------------------------------- 4D playback
@@ -384,7 +396,7 @@ function renderPlay() {
   $('play').hidden = o.length < 2;
   $('tslider').max = Math.max(0, o.length - 1); $('tslider').value = Math.max(0, o.indexOf(cur));
   const s = scans[cur];
-  $('playLbl').textContent = s ? `${dayLbl(dayOf(s)) || 'Scan ' + (o.indexOf(cur) + 1)} of ${o.length} scans` : '';
+  $('playLbl').textContent = s ? `Scan ${o.indexOf(cur) + 1} of ${o.length}${dayOf(s) != null ? ' · ' + dayLbl(dayOf(s)) : ''}` : '';
 }
 $('tslider').oninput = e => { const o = order().filter(i => scans[i].status === 'done'); const i = o[+e.target.value]; if (i !== undefined && i !== cur) select(i); };
 $('playBtn').onclick = () => {
