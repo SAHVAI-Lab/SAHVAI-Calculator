@@ -30,7 +30,7 @@ export const MODELS = {
   blast: { label: 'BLAST-CT (DeepMedic)', version: 'b1', dir: 'models/blast/',
     files: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`blast_m${i + 1}`, { size: BLAST_SIZE }])) },
   claim: { label: 'CLAIM nnU-Net 2D', version: 'c1', dir: 'models/claim/', files: { claim2d: { size: 92701875, chunks: 2 } } },
-  deepbleed: { label: 'DeepBleed V-Net', version: 'd1', dir: 'models/deepbleed/', files: { deepbleed: { size: 90195721, chunks: 2 } } },
+  deepbleed: { label: 'DeepBleed V-Net', version: 'd2', dir: 'models/deepbleed/', files: { deepbleed: { size: 90242129, chunks: 2 } } },
 };
 const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6], deepbleed: [1] };
 // DeepBleed segments ICH + IVH: the reference classes it is compared with, per label scheme

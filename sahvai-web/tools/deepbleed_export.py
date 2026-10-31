@@ -38,8 +38,20 @@ class Down(nn.Module):
         d = F.relu(s.ds(x)); y = d
         for _ in range(s.n): y = F.relu(s.conv(y))
         return y + d
+class Up2(nn.Module):
+    """ConvTranspose3d(kernel 2, stride 2) without a 3D transposed convolution (which ONNX Runtime's WebGPU backend lacks):
+    the 2x2x2 kernel offsets do not overlap, so it is one 1x1x1 convolution to 8 x C channels (one per offset),
+    interleaved along W, H and D with stack + reshape. Identical arithmetic."""
+    def __init__(s, cin, cout): super().__init__(); s.conv = nn.Conv3d(cin, 8 * cout, 1); s.c = cout
+    def forward(s, x):
+        B, _, D, H, W = x.shape; C = s.c
+        y = s.conv(x)                                   # channel ((a*2 + b)*2 + e)*C + c  for offset (a, b, e)
+        p = [y[:, k * C:(k + 1) * C] for k in range(8)]
+        wv = [torch.stack([p[2 * k], p[2 * k + 1]], -1).reshape(B, C, D, H, 2 * W) for k in range(4)]          # interleave e along W
+        hv = [torch.stack([wv[2 * a], wv[2 * a + 1]], -2).reshape(B, C, D, 2 * H, 2 * W) for a in range(2)]   # interleave b along H
+        return torch.stack([hv[0], hv[1]], -3).reshape(B, C, 2 * D, 2 * H, 2 * W)                          # interleave a along D
 class Up(nn.Module):
-    def __init__(s, cin, c, n): super().__init__(); s.us = nn.ConvTranspose3d(cin, c // 2, 2, 2); s.conv = nn.Conv3d(c, c, 5, padding=2); s.n = n
+    def __init__(s, cin, c, n): super().__init__(); s.us = Up2(cin, c // 2); s.conv = nn.Conv3d(c, c, 5, padding=2); s.n = n
     def forward(s, x, skip):
         cat = torch.cat([F.relu(s.us(x)), skip], 1); y = cat
         for _ in range(s.n): y = F.relu(s.conv(y))
@@ -59,7 +71,10 @@ class VNet(nn.Module):
 
 net = VNet().eval()
 conv = lambda m, n: (m.weight.data.copy_(torch.from_numpy(W(n + '/kernel').transpose(4, 3, 0, 1, 2).copy())), m.bias.data.copy_(torch.from_numpy(W(n + '/bias'))))
-tconvw = lambda m, n: (m.weight.data.copy_(torch.from_numpy(W(n + '/kernel').transpose(4, 3, 0, 1, 2).copy())), m.bias.data.copy_(torch.from_numpy(W(n + '/bias'))))
+def tconvw(m, n):   # TF Conv3DTranspose kernel (a, b, e, out, in) -> 1x1x1 conv weight [((a*2+b)*2+e)*out + o, in]
+    k = W(n + '/kernel'); A, B_, E, O, I = k.shape
+    m.conv.weight.data.copy_(torch.from_numpy(k.reshape(A * B_ * E, O, I).reshape(A * B_ * E * O, I)[:, :, None, None, None].copy()))
+    m.conv.bias.data.copy_(torch.from_numpy(np.tile(W(n + '/bias'), A * B_ * E)))
 conv(net.inp, 'input_layer/convolution')
 for i, b in enumerate([net.d1, net.d2, net.d3, net.d4], 1): conv(b.ds, f'down_{i}/downsample'); conv(b.conv, f'down_{i}/convolution')
 for i, b in zip([4, 3, 2, 1], [net.u4, net.u3, net.u2, net.u1]): tconvw(b.us, f'up_{i}/upsample'); conv(b.conv, f'up_{i}/convolution')
@@ -79,5 +94,6 @@ print(f'torch vs TF reference: max |diff| {np.abs(mine - ref).max():.2e}, mask m
 torch.onnx.export(net, (torch.from_numpy(x)[None, None],), OUT, input_names=['x'], output_names=['prob'], opset_version=17, dynamo=False)
 import onnxruntime as ort
 y = ort.InferenceSession(OUT, providers=['CPUExecutionProvider']).run(None, {'x': x[None, None]})[0][0, 0]
+import onnx; print('ops', sorted({nd.op_type for nd in onnx.load(OUT).graph.node}))
 print(f'ONNX Runtime vs TF reference: max |diff| {np.abs(y - ref).max():.2e}, mask mismatches {((y > .5) != (ref > .5)).sum()}')
 np.save(OUT + '.testx.npy', x); np.save(OUT + '.testref.npy', ref)
