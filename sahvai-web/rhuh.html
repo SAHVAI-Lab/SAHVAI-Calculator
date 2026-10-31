@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RHUH SAH dataset in the browser</title>
-<meta name="description" content="Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp;amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM or BLAST-CT on it and compare with the expert. Everything runs on this computer. Research and education use only.">
+<meta name="description" content="Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp;amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM, BLAST-CT or the Valladolid SAH Swin UNETR on it and compare with the expert. Everything runs on this computer. Research and education use only.">
 <script src="coi-serviceworker.js"></script>
 <link rel="stylesheet" href="style-models.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
@@ -13,8 +13,8 @@
 <header class="top">
   <div class="wrap">
     <h1>RHUH SAH dataset <span>in the browser</span></h1>
-    <p>Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM or BLAST-CT on it and compare with the expert. Everything runs on this computer.</p>
-    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="deepbleed.html">DeepBleed ICH</a><a href="rhuh.html" aria-current="page">RHUH dataset</a></nav>
+    <p>Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM, BLAST-CT or the Valladolid SAH Swin UNETR on it and compare with the expert. Everything runs on this computer.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="deepbleed.html">DeepBleed ICH</a><a href="sahswin.html">SAH Swin UNETR</a><a href="rhuh.html" aria-current="page">RHUH dataset</a></nav>
   </div>
 </header>
 
@@ -51,7 +51,7 @@
   <section class="panel dataset" id="panel-rhuh" aria-labelledby="h-rhuh">
     <header class="phead">
       <span class="num">R</span>
-      <div><h2 id="h-rhuh">RHUH SAH dataset <span>Cepeda &amp; García-García · Valladolid, Spain</span></h2><p class="sub">Open non-contrast CT scans of aneurysmal SAH with expert manual bleeding masks. Load one case and its mask, run any of the three models on it and compare with the expert segmentation.</p></div>
+      <div><h2 id="h-rhuh">RHUH SAH dataset <span>Cepeda &amp; García-García · Valladolid, Spain</span></h2><p class="sub">Open non-contrast CT scans of aneurysmal SAH with expert manual bleeding masks. Load one case and its mask, run any of the four models on it and compare with the expert segmentation.</p></div>
       <span class="origin">Río Hortega University Hospital · Zenodo</span>
     </header>
     <ol class="steps">
@@ -72,6 +72,7 @@
           <option value="sahvai">1 · SAHVAI (BrainHemoAI)</option>
           <option value="claim">2 · CLAIM nnU-Net</option>
           <option value="blast">3 · BLAST-CT</option>
+          <option value="sahswin">4 · SAH Swin UNETR (Valladolid)</option>
         </select>
         <button class="btn run" type="button">Run</button>
       </div>
@@ -82,7 +83,7 @@
         <button class="btn ghost" type="button" data-demo="2">RHUH case 003</button>
       </div>
     </div>
-    <div class="note small-note"><b>About these scans.</b> RHUH volumes are registered to the MNI template (193 × 229 × 193 at 1 mm) and skull-stripped: brain only, background 0, intensities close to Hounsfield units. The three models were trained on whole-head CT, so the page detects this, sets the background to air (−1000 HU) and, for SAHVAI, takes the brain mask from the scan. Treat the results as approximate. On cases 001–003 the any-blood Dice against the expert mask was 0.65, 0.27 and 0.62 for SAHVAI (BrainHemoAI), 0.12, 0.02 and 0.37 for CLAIM, and 0.22 for BLAST-CT (case 001), so SAHVAI is the default here.</div>
+    <div class="note small-note"><b>About these scans.</b> RHUH volumes are registered to the MNI template (193 × 229 × 193 at 1 mm) and skull-stripped: brain only, background 0, intensities close to Hounsfield units. The three models were trained on whole-head CT, so the page detects this, sets the background to air (−1000 HU) and, for SAHVAI, takes the brain mask from the scan. Treat the results as approximate. On cases 001–003 the any-blood Dice against the expert mask was 0.65, 0.27 and 0.62 for SAHVAI (BrainHemoAI), 0.12, 0.02 and 0.37 for CLAIM, and 0.22 for BLAST-CT (case 001). The Valladolid SAH Swin UNETR (option 4) works in exactly this template space and scored 0.77, 0.70 and 0.82, but it comes from the same hospital and these cases may have been used to develop it.</div>
     <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
     <div class="results" hidden>
       <div class="vols"></div>
@@ -93,7 +94,7 @@
     </div>
     <div class="cite"><h3>Citation, licence and disclaimer</h3>
     <p><b>Dataset.</b> Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation [data set]. Zenodo; 2023. Version 1. <a href="https://doi.org/10.5281/zenodo.8228847">doi:10.5281/zenodo.8228847</a>. Licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Río Hortega University Hospital, Valladolid, Spain. Cases 001–003 are hosted here unchanged as demos, under the same licence.</p>
-    <p><b>Related work by the dataset authors.</b> García-García S, Cepeda S, Müller D, Mosteiro A, Torné R, Agudo S, de la Torre N, Arrese I, Sarabia R. Mortality prediction of patients with subarachnoid hemorrhage using a deep learning model based on an initial brain CT scan. <i>Brain Sci</i> 2024;14(1):10. <a href="https://doi.org/10.3390/brainsci14010010">doi:10.3390/brainsci14010010</a> · García-García S, Cepeda S, Arrese I, Sarabia R. A fully automated pipeline using Swin transformers for deep learning-based blood segmentation on head computed tomography scans after aneurysmal subarachnoid hemorrhage. <i>World Neurosurg</i> 2024. <a href="https://doi.org/10.1016/j.wneu.2024.07.216">doi:10.1016/j.wneu.2024.07.216</a> · Code: <a href="https://github.com/smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction">smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction</a> (Academic Non-Commercial Source Code License; their Swin UNETR weights are not distributed and are not run here).</p>
+    <p><b>Related work by the dataset authors.</b> García-García S, Cepeda S, Müller D, Mosteiro A, Torné R, Agudo S, de la Torre N, Arrese I, Sarabia R. Mortality prediction of patients with subarachnoid hemorrhage using a deep learning model based on an initial brain CT scan. <i>Brain Sci</i> 2024;14(1):10. <a href="https://doi.org/10.3390/brainsci14010010">doi:10.3390/brainsci14010010</a> · García-García S, Cepeda S, Arrese I, Sarabia R. A fully automated pipeline using Swin transformers for deep learning-based blood segmentation on head computed tomography scans after aneurysmal subarachnoid hemorrhage. <i>World Neurosurg</i> 2024. <a href="https://doi.org/10.1016/j.wneu.2024.07.216">doi:10.1016/j.wneu.2024.07.216</a> · Code: <a href="https://github.com/smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction">smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction</a> (Academic Non-Commercial Source Code License). Their Swin UNETR segmentation model runs in this browser on the <a href="sahswin.html">SAH Swin UNETR page</a> and as option 4 here.</p>
     <p>Data you drop here stays in this browser. The comparison is between a public research dataset and research models; it is not a validation of any model for clinical use.</p>
     <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>
   </section>
@@ -106,7 +107,7 @@
 
 <footer class="wrap">
   <p><b>Research and education use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
-  <p><b>Acknowledgements.</b> We thank Dr Santiago Cepeda and Dr Sergio García-García for the RHUH dataset (<a href="LICENSE.md#rhuh-dataset">CC BY 4.0</a>), and the BrainHemoAI, CLAIM and BLAST-CT groups for the models it can be compared with. Inclusion here does not imply endorsement of this site by these groups.</p>
+  <p><b>Acknowledgements.</b> We thank Dr Santiago Cepeda and Dr Sergio García-García for the RHUH dataset (<a href="LICENSE.md#rhuh-dataset">CC BY 4.0</a>), and the BrainHemoAI, CLAIM, BLAST-CT and Valladolid groups for the models it can be compared with. Inclusion here does not imply endorsement of this site by these groups.</p>
   <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0), which runs <a href="https://doi.org/10.1126/science.aec6129">RADAR</a> (Zhang, Ding et al., Science 2026). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
   <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
 </footer>

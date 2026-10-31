@@ -2,7 +2,7 @@
 
 **https://sahvai-lab.github.io/SAHVAI-Calculator/sahvai-web/** (also the *SAHVAI Web (AI)* tab of the [SAHVAI Calculator](https://sahvai-lab.github.io/SAHVAI-Calculator/))
 
-Six pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the SAHVAI 3D-4D page (`3d.html`, `app-3d.js`) reuses its `worker.js`; the other four (`claim.html`, `blast.html`, `deepbleed.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
+Seven pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the SAHVAI 3D-4D page (`3d.html`, `app-3d.js`) reuses its `worker.js`; the other five (`claim.html`, `blast.html`, `deepbleed.html`, `sahswin.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
 
 | page | model / data | from | classes | licence |
 |---|---|---|---|---|
@@ -10,12 +10,13 @@ Six pages, each its own tab in the SAHVAI Calculator, all running entirely in th
 | CLAIM aSAH (`claim.html`) | nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., *Front Neurol* 2024) | CLAIM, Charité Berlin | SAH, IVH, ventricles, ICH, aneurysm, SDH | CC BY-NC 4.0 |
 | BLAST-CT (`blast.html`) | DeepMedic, 1 or 12 models (Monteiro et al., *Lancet Digit Health* 2020) | Cambridge / Imperial College London | IPH, extra-axial haemorrhage, oedema, IVH (traumatic brain injury) | Apache-2.0 |
 | DeepBleed ICH (`deepbleed.html`) | 3D V-Net, MISTIE-2 weights (Sharrock et al., *Neuroinformatics* 2021) | MISTIE investigators, Johns Hopkins | ICH + IVH (one class) | CC BY-NC-ND 4.0 |
+| SAH Swin UNETR (`sahswin.html`) | Swin UNETR from the Valladolid SAH mortality pipeline (García-García, Cepeda et al., *World Neurosurg* 2024; *Brain Sci* 2024) | Río Hortega University Hospital, Valladolid / University of Augsburg | blood (SAH with any extension; one class) | academic non-commercial |
 | SAHVAI 3D-4D (`3d.html`) | the SAHVAI model above, plus 3D surfaces (three.js) and volumes over serial scans | SAHVAI Lab | SAH, IPH, IVH in 3D; volume vs date | MIT (with permission) |
-| RHUH dataset (`rhuh.html`) | open aSAH NCCT scans with expert bleeding masks (Cepeda & García-García, Zenodo 2023) | Río Hortega University Hospital, Valladolid | expert mask vs any of the three models (Dice, volumes) | CC BY 4.0 (data not hosted here) |
+| RHUH dataset (`rhuh.html`) | open aSAH NCCT scans with expert bleeding masks (Cepeda & García-García, Zenodo 2023) | Río Hortega University Hospital, Valladolid | expert mask vs any of four models (Dice, volumes) | CC BY 4.0 (cases 001–003 hosted as demos) |
 
 The design follows [RADAR in the browser](https://github.com/jarrelscy/radar-web), the browser port of Alibaba DAMO Academy's RADAR abdominal CT model (Zhang, Ding et al., *Science* 2026).
 
-Images never leave the computer: files are read and processed in the browser tab and nothing is uploaded. Models are served from this site and cached by the browser (SAHVAI 26.5 MB, BLAST-CT 2.1 MB per model, CLAIM 92.7 MB and DeepBleed 90.2 MB, each in two parts).
+Images never leave the computer: files are read and processed in the browser tab and nothing is uploaded. Models are served from this site and cached by the browser (SAHVAI 26.5 MB, BLAST-CT 2.1 MB per model, CLAIM 92.7 MB and DeepBleed 90.2 MB, each in two parts; SAH Swin UNETR 276.8 MB in three).
 
 > **Research and education use only.** This is not a medical device. None of these models has been validated or approved for clinical use in this form; do not use them for diagnosis, triage or treatment decisions. Always review the segmentation against the images.
 
@@ -104,6 +105,23 @@ DeepBleed runs on the CPU (WebAssembly) whatever the Compute setting: on WebGPU 
 
 DeepBleed is sensitive to small changes in its input (brain mask, placement in the template): expect volume differences of several mL between runs of the original and this port on the same scan.
 
+## SAH Swin UNETR (Río Hortega University Hospital, Valladolid) — `sahswin.html`
+
+[smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction](https://github.com/smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction) (García-García S, Cepeda S, et al., *World Neurosurg* 2024, doi:10.1016/j.wneu.2024.07.216; *Brain Sci* 2024;14:10): the blood-segmentation stage of the group's SAH mortality-prediction pipeline, a MONAI Swin UNETR (feature size 48, 63.1 M parameters, 2 classes) whose checkpoint `SWIN_UNETR_48_100_best_metric_model.pth` is linked from the README (Google Drive). Not CereBleed: the group's newer nnU-Net multiclass tool ([geibac.uva.es/cerebleed](https://geibac.uva.es/cerebleed); Cepeda et al., *Neurosurgery* 2026) is available only as a hosted service. Licence: the repository's Academic Non-Commercial Source Code License Agreement (© 2024 Hospital Río Hortega and University of Augsburg; the README also says CC BY-NC); see LICENSE.md.
+
+Original pipeline (`SAH_mortality_prediction.py` + `inference_2.py`): dcm2niix → FSL brain extraction (as DeepBleed) → ANTs `SyN` registration (affine + deformable, Mattes MI) of the brain to the repository's 1 mm MNI CT template (193 × 229 × 193) → MONAI `Spacingd` 1.5 × 1.5 × 2 mm (bilinear) → `NormalizeIntensityd(nonzero=True)` → `CropForegroundd` (voxels > 0 after normalisation) → `sliding_window_inference` (128 × 128 × 64, overlap 0.25, constant blending) → `Invertd` (bilinear logits) → argmax, in template space. `lib/sahswin.js` reproduces the MONAI steps exactly, including which voxels count as "non-zero" after `Spacingd` (torch's float64 grid leaves values of ~1e-14 at the brain's edge, and the network's volume moves by up to 10% if they are left out). A scan already in the template space (the RHUH preprocessed scans) goes straight to the network; any other scan has its brain extracted (SAHVAI's method) and is registered to a 2 mm version of the template (rotation, translation and per-axis scale, mutual information, 4 then 2 mm) instead of SyN; the logits are mapped back to the scan and volumes are measured there (the original's template-space volumes scale with head size: 184 vs 101–107 mL on BHSD SAH_002).
+
+ONNX (`tools/sahswin_export.py`): weights unchanged in fp32; transposed convolutions as 1×1×1 convolutions plus interleave; window attention in chunks of 64 windows (the first stage's 500 windows × 3 heads × 343² attention matrices are 706 MB each at once; chunked, the session peaks at 2.2 GB of WebAssembly memory instead of hitting the 4 GB limit); shifted-window masks computed in the graph from region ids instead of 280 MB of constants. Runs on the CPU (about 30 s per window on 8 threads, two windows for a typical brain).
+
+| check | result |
+|---|---|
+| ONNX vs PyTorch (MONAI 1.6), one 128 × 128 × 64 window | max logit difference 1.4e-5; 0 voxels differ |
+| browser pipeline vs the original Python pipeline, RHUH cases 001–003 (template space) | Dice 1.000, 1.000, 1.000 (63.0, 12.5, 37.2 mL) |
+| the same, vs the RHUH expert masks | Dice 0.772, 0.696, 0.822 (expert 60.8, 13.4, 36.9 mL); the model comes from the same hospital, so not an independent test |
+| original pipeline, ANTs SyN vs rigid registration, BHSD SAH_001–003 (native space) | Dice 0.79, 0.93, 0.87 |
+| browser registration vs the original with SyN, same brain mask | Dice 0.77, 0.94, 0.90 (19.4 vs 27.6, 106.8 vs 101.0, 23.2 vs 19.7 mL) |
+| BHSD SAH_002 in the page, vs expert all-blood labels | 106.8 vs 105.5 mL, Dice 0.832 (original with SyN: 0.829) |
+
 ## RHUH SAH dataset (Cepeda & García-García) — `rhuh.html`
 
 [Zenodo 8228847](https://doi.org/10.5281/zenodo.8228847): non-contrast CT scans of aneurysmal SAH from Río Hortega University Hospital (Valladolid, Spain) with expert manual bleeding masks, NIfTI, CC BY 4.0, distributed as one 649 MB RAR archive. Browsers cannot read RAR, so the user extracts it and drops (or chooses) the CT and mask of one case; the page runs the chosen model and reports any-blood Dice and volumes against the expert mask, with the mask outlined in white. No RHUH data are hosted here.
@@ -140,12 +158,14 @@ Recent desktop Chrome or Edge (tested in Chromium); Firefox and Safari may work 
 
 ## Licence and attribution
 
-See [LICENSE.md](LICENSE.md): app code CC BY-NC-SA 4.0 (adapted from radar-web); BrainHemoAI code and weights MIT, used with the permission of Dr Ping Hu and the BrainHemoAI group, to whom we are grateful; CLAIM weights and demo data CC BY-NC 4.0; BLAST-CT Apache-2.0 (Copyright 2020 Imperial College London); DeepBleed CC BY-NC-ND 4.0 (weights unchanged) and its MISTIE/CLEAR demo CT CC BY-NC 4.0; RHUH dataset CC BY 4.0 (not redistributed). Please cite:
+See [LICENSE.md](LICENSE.md): app code CC BY-NC-SA 4.0 (adapted from radar-web); BrainHemoAI code and weights MIT, used with the permission of Dr Ping Hu and the BrainHemoAI group, to whom we are grateful; CLAIM weights and demo data CC BY-NC 4.0; BLAST-CT Apache-2.0 (Copyright 2020 Imperial College London); DeepBleed CC BY-NC-ND 4.0 (weights unchanged) and its MISTIE/CLEAR demo CT CC BY-NC 4.0; SAH Swin UNETR academic non-commercial licence (weights unchanged); RHUH dataset CC BY 4.0 (cases 001–003 hosted as demos). Please cite:
 
 - Hu P, Zhou H, Yan T, et al. Deep learning-assisted identification and quantification of aneurysmal subarachnoid hemorrhage in non-contrast CT scans: development and external validation of Hybrid 2D/3D UNet. *NeuroImage* 2023;279:120321. doi:10.1016/j.neuroimage.2023.120321
 - Kiewitz J, Aydin OU, Hilbert A, Gultom M, Nouri A, Khalil AA, Vajkoczy P, Tanioka S, Ishida F, Dengler NF, Frey D. Deep learning-based multiclass segmentation in aneurysmal subarachnoid hemorrhage. *Front Neurol* 2024;15:1490216. doi:10.3389/fneur.2024.1490216
 - Monteiro M, Newcombe VFJ, Mathieu F, Adatia K, Kamnitsas K, Ferrante E, Das T, Whitehouse D, Rueckert D, Menon DK, Glocker B. Multiclass semantic segmentation and quantification of traumatic brain injury lesions on head CT using deep learning: an algorithm development and multicentre validation study. *Lancet Digit Health* 2020;2(6):e314–e322. doi:10.1016/S2589-7500(20)30085-6
 - Sharrock MF, Mould WA, Ali H, Hildreth M, Awad IA, Hanley DF, Muschelli J. 3D deep neural network segmentation of intracerebral hemorrhage: development and validation for clinical trials. *Neuroinformatics* 2021;19(3):403–415. doi:10.1007/s12021-020-09493-5
+- García-García S, Cepeda S, Arrese I, Sarabia R. A fully automated pipeline using Swin transformers for deep learning-based blood segmentation on head computed tomography scans after aneurysmal subarachnoid hemorrhage. World Neurosurg 2024. doi:10.1016/j.wneu.2024.07.216 (SAH Swin UNETR)
+- García-García S, Cepeda S, Müller D, et al. Mortality prediction of patients with subarachnoid hemorrhage using a deep learning model based on an initial brain CT scan. Brain Sci 2024;14(1):10. doi:10.3390/brainsci14010010
 - Hanley D, Mould WA, Ullman N, Muschelli J. Head CT scans associated with "Validated automatic brain extraction of head CT images". Johns Hopkins Research Data Repository; 2019. doi:10.7281/T1/CZDPSX (DeepBleed demo case)
 - Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation. Zenodo; 2023. doi:10.5281/zenodo.8228847
 - Wu B, et al. BHSD: a 3D multi-class brain hemorrhage segmentation dataset. MLMI 2023, LNCS 14348. doi:10.1007/978-3-031-45673-2_15 (CLAIM demo cases)

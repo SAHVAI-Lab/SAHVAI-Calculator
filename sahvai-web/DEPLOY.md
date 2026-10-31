@@ -9,11 +9,12 @@ Version 2.1 · 25 October 2026 (four pages: SAHVAI / BrainHemoAI, CLAIM, BLAST-C
 | path | contents |
 |---|---|
 | `index.html`, `app.js`, `worker.js`, `style.css` | the SAHVAI (BrainHemoAI) page (static files, no build step) |
-| `claim.html`, `blast.html`, `rhuh.html`, `app-models.js`, `worker-models.js`, `style-models.css` | the CLAIM, BLAST-CT and RHUH dataset pages (`tools/make_pages.py` regenerates the HTML) |
+| `claim.html`, `blast.html`, `deepbleed.html`, `sahswin.html`, `rhuh.html`, `app-models.js`, `worker-models.js`, `style-models.css` | the CLAIM, BLAST-CT and RHUH dataset pages (`tools/make_pages.py` regenerates the HTML) |
 | `lib/` | DICOM / NIfTI / NRRD readers, resampling, brain extraction, UNet orchestration, post-processing |
 | `models/` | SAHVAI: the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
 | `models/blast/` | BLAST-CT: the 12 BLAST-CT DeepMedic models (2.1 MB each, float16; Apache-2.0) |
 | `models/claim/` | CLAIM: the CLAIM nnU-Net 2D model in two parts (92.7 MB, float16; CC BY-NC 4.0) |
+| `models/sahswin/` | SAH Swin UNETR: the network in three parts (276.8 MB, float32, unchanged weights; academic non-commercial licence) and a 2 mm registration template |
 | `models/deepbleed/` | DeepBleed: the V-Net in two parts (90.2 MB, float32, unchanged weights; CC BY-NC-ND 4.0) and its 1.5 mm CT template |
 | `vendor/` | ONNX Runtime Web 1.30 and DICOM image codecs (all local) |
 | `coi-serviceworker.js` | enables multi-threading when the server cannot send the headers below |
@@ -42,7 +43,7 @@ It is a static site: copy the folder to any web server. Four requirements:
    `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
    (Without them `coi-serviceworker.js` adds them on first load; with them it is not needed.)
 3. **MIME types**: `.wasm` → `application/wasm`, `.mjs` / `.js` → `text/javascript`.
-4. Allow files up to ~50 MB (`models/claim/claim2d.onnx.0` and `.1`, `models/deepbleed/deepbleed.onnx.0` and `.1`, `models/pm.onnx`, the runtime `.wasm`).
+4. Allow files up to ~50 MB (`models/claim/claim2d.onnx.0` and `.1`, `models/deepbleed/deepbleed.onnx.0` and `.1`, `models/sahswin/sahswin.onnx.0`–`.2` (92 MB each), `models/pm.onnx`, the runtime `.wasm`).
 
 nginx:
 

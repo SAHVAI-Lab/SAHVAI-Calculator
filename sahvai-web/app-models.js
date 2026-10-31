@@ -1,4 +1,4 @@
-// SAHVAI Web model pages: claim.html, blast.html, deepbleed.html and rhuh.html (one panel each) share this script and worker-models.js.
+// SAHVAI Web model pages: claim.html, blast.html, deepbleed.html, sahswin.html and rhuh.html (one panel each) share this script and worker-models.js.
 // The SAHVAI / BrainHemoAI page itself (index.html) uses the original app.js and worker.js.
 import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
@@ -34,13 +34,15 @@ const CLASSES = {
   blast: { 1: C('IPH', 'intraparenchymal', [255, 45, 120]), 2: C('EAH', 'extra-axial (SAH, SDH, EDH)', [255, 176, 0]), 3: C('Oedema', 'perilesional oedema', [80, 220, 120]),
     4: C('IVH', 'intraventricular', [30, 200, 255]) },
   deepbleed: { 1: C('ICH + IVH', 'intracerebral and intraventricular (one class)', [255, 45, 120]) },
+  sahswin: { 1: C('Blood', 'SAH with any IVH / ICH extension (one class)', [255, 176, 0]) },
 };
-const BLOOD = { sahvai: [1, 2, 3], claim: [1, 2, 4, 6], blast: [1, 2, 4], deepbleed: [1] };
+const BLOOD = { sahvai: [1, 2, 3], claim: [1, 2, 4, 6], blast: [1, 2, 4], deepbleed: [1], sahswin: [1] };
 const MODEL_NAME = {
   sahvai: 'Hybrid 2D/3D UNet (Hu et al., NeuroImage 2023;279:120321), BrainHemoAI weights, MIT License',
   claim: 'nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., Front Neurol 2024;15:1490216), CLAIM Charité weights, CC BY-NC 4.0',
   blast: 'BLAST-CT DeepMedic (Monteiro et al., Lancet Digit Health 2020;2:e314-22), biomedia-mira weights, Apache-2.0',
   deepbleed: 'DeepBleed 3D V-Net (Sharrock et al., Neuroinformatics 2021;19:403-415), MISTIE-2 weights, CC BY-NC-ND 4.0 (format conversion only)',
+  sahswin: 'SAH Swin UNETR (García-García, Cepeda et al., World Neurosurg 2024; Brain Sci 2024;14:10), Río Hortega / Augsburg weights, academic non-commercial licence (format conversion only)',
 };
 
 function volumesFor(model, r) {
@@ -50,6 +52,11 @@ function volumesFor(model, r) {
     let b = 0; if (r.mask) for (let i = 0; i < r.mask.length; i++) b += r.mask[i];
     const vox = r.grid.sp[0] * r.grid.sp[1] * r.grid.sp[2] / 1000;
     return [['Brain mask', b * vox, 'extracted brain the network sees', [60, 230, 90]], ['ICH + IVH', v.ICH, 'DeepBleed hemorrhage volume', null, 'total']];
+  }
+  if (model === 'sahswin') {
+    let b = 0; if (r.mask) for (let i = 0; i < r.mask.length; i++) b += r.mask[i];
+    const vox = r.grid.sp[0] * r.grid.sp[1] * r.grid.sp[2] / 1000;
+    return [['Brain mask', b * vox, 'brain the network sees', [60, 230, 90]], ['Blood', v.SAH, 'measured on the scan' + (r.template_mL != null ? ` · ${r.template_mL.toFixed(1)} mL in template space` : ''), null, 'total']];
   }
   const cards = Object.entries(cl).map(([, c]) => [c.key, v[c.key], c.name, c.color]);
   const tot = BLOOD[model].reduce((a, i) => a + (v[cl[i].key] || 0), 0);
@@ -210,6 +217,20 @@ const CONFIG = {
     details: r => [`registration to the 1.5 mm template: ${r.transform && r.transform.refine ? 'centre of mass + mutual information' : 'centre of mass'}${r.transform ? ` (rotation ${r.transform.rotation_deg.map(v => v.toFixed(1)).join('/')}°, shift ${r.transform.shift_mm.map(v => v.toFixed(1)).join('/')} mm)` : ''}`],
     extra: r => ({ registration: r.transform, note: 'labels: 1 = hemorrhage (ICH + IVH); brain mask from SAHVAI extraction, not FSL BET' }),
   },
+  sahswin: {
+    id: 'sahswin', model: 'sahswin', title: 'SAH Swin UNETR', prefix: 'sah-swin-unetr',
+    demos: [
+      { url: 'demo/rhuh/sah_rhuh_001_ct.nii.gz', gt: 'demo/rhuh/sah_rhuh_001_seg.nii.gz', gtScheme: 'binary', name: 'RHUH case 001 (Cepeda & García-García, CC BY 4.0)' },
+      { url: 'demo/rhuh/sah_rhuh_003_ct.nii.gz', gt: 'demo/rhuh/sah_rhuh_003_seg.nii.gz', gtScheme: 'binary', name: 'RHUH case 003 (Cepeda & García-García, CC BY 4.0)' },
+      { url: 'demo/claim/SAH_002_0000.nii.gz', gt: 'demo/claim/SAH_002_gt.nii.gz', gtScheme: 'bhsd', name: 'BHSD case SAH_002 (all blood labels)' },
+      { url: 'demo/claim/SAH_001_0000.nii.gz', gt: 'demo/claim/SAH_001_gt.nii.gz', gtScheme: 'bhsd', name: 'BHSD case SAH_001 (all blood labels)' },
+    ],
+    getOpts: () => ({}),
+    details: r => [r.transform && r.transform.identity ? 'scan already in the 1 mm MNI CT template space (RHUH preprocessing): no registration'
+      : `registration to the 1 mm MNI CT template${r.transform ? ` (rotation ${r.transform.rotation_deg.map(v => v.toFixed(1)).join('/')}°, scale ${r.transform.scale.map(v => v.toFixed(2)).join('/')}, shift ${r.transform.shift_mm.map(v => v.toFixed(1)).join('/')} mm)` : ''}`,
+      r.windows ? `${r.windows} window${r.windows > 1 ? 's' : ''} of 128 × 128 × 64 at 1.5 × 1.5 × 2 mm` : ''].filter(Boolean),
+    extra: r => ({ registration: r.transform, template_space_mL: r.template_mL, note: 'labels: 1 = blood (SAH with any extension); brain mask from SAHVAI extraction (or the scan, if skull-stripped), not FSL BET' }),
+  },
 };
 for (const k of Object.keys(CONFIG)) if ($(`panel-${k}`)) panels[k] = new Panel(CONFIG[k]);
 document.querySelectorAll('#panel-sahvai input[name=align]').forEach(el => el.addEventListener('change', () => {
@@ -245,7 +266,7 @@ class DatasetPanel extends Panel {
     }
     if (this.ct) this.setStage(`Case ready: ${this.ct.name}${this.mask ? ` with expert mask ${this.mask.name}` : ' (no expert mask chosen)'}. Pick a model and press Run.`, 0);
   }
-  modelOpts() { return this.model === 'claim' ? { mode: 'exact', mirror: false } : this.model === 'blast' ? { ensemble: false } : { angle: null }; }
+  modelOpts() { return this.model === 'claim' ? { mode: 'exact', mirror: false } : this.model === 'blast' ? { ensemble: false } : this.model === 'sahswin' ? {} : { angle: null }; }
   runDemo(d) {   // a hosted RHUH case with its expert mask, through the chosen model
     this.setModel(this.q('select.model').value);
     if (submit(this, { model: this.model, demo: d.url, demoName: d.name, gt: d.gt, gtScheme: 'binary', opts: this.modelOpts(), label: `${d.name} with ${this.model}` })) this.begin();
@@ -276,6 +297,14 @@ fetch('models/claim/claim2d.onnx.0', { method: 'HEAD' }).then(r => r.ok, () => f
   if (o) { o.disabled = !ok; if (!ok) o.textContent += ' (weights not installed yet)'; }
 });
 
+// the SAH Swin UNETR files likewise
+fetch('models/sahswin/sahswin.onnx.0', { method: 'HEAD' }).then(r => r.ok, () => false).then(ok => {
+  const p = $('panel-sahswin');
+  if (p) { p.querySelector('.pending').hidden = ok; p.querySelector('.drop').classList.toggle('disabled', !ok); }
+  const o = $('rhuh-model') && $('rhuh-model').querySelector('option[value=sahswin]');
+  if (o) { o.disabled = !ok; if (!ok) o.textContent += ' (weights not installed yet)'; }
+});
+
 // warm up this page's model when it is small (BLAST-CT 2 MB); CLAIM (93 MB) downloads on the first run
 startWorker();
 const pre = panels.blast ? 'blast' : null;
@@ -286,3 +315,4 @@ if (pre) {
 }
 if (panels.claim) panels.claim.setStage('The CLAIM model (92.7 MB) downloads on the first run and is then cached by the browser.', 0);
 if (panels.deepbleed) panels.deepbleed.setStage('The DeepBleed model (90.2 MB) downloads on the first run and is then cached by the browser.', 0);
+if (panels.sahswin) panels.sahswin.setStage('The SAH Swin UNETR model (277 MB) downloads on the first run and is then cached by the browser.', 0);

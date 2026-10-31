@@ -1,6 +1,6 @@
-// SAHVAI Web model pages (CLAIM, BLAST-CT, DeepBleed, RHUH dataset): runs the model pipelines off the main thread. One job at a time; sessions are kept per model.
+// SAHVAI Web model pages (CLAIM, BLAST-CT, DeepBleed, SAH Swin UNETR, RHUH dataset): runs the model pipelines off the main thread. One job at a time; sessions are kept per model.
 // In:  {job: 'preload', model, device}
-//      {job: 'run', id, model: 'sahvai'|'claim'|'blast'|'deepbleed', device, files | demo (url), gt (File | url), gtScheme, opts}
+//      {job: 'run', id, model: 'sahvai'|'claim'|'blast'|'deepbleed'|'sahswin', device, files | demo (url), gt (File | url), gtScheme, opts}
 // Out: {type: 'log'|'progress'|'ready'|'result'|'error', id, model, ...}
 import * as ort from './vendor/ort/ort.webgpu.min.mjs';
 import { openInput } from './lib/source.js';
@@ -15,6 +15,7 @@ import { runClaim, CLAIM_GRID, CLAIM_INPUT_GRID } from './lib/claim.js';
 import { detectStripped, airBackground, brainMaskFor } from './lib/stripped.js';
 import { extractBrain } from './lib/brain.js';
 import { loadTemplate, runDeepBleed } from './lib/deepbleed.js';
+import { loadSwinTemplate, runSahSwin, inTemplateSpace } from './lib/sahswin.js';
 
 const base = new URL('./', import.meta.url).href;
 ort.env.wasm.wasmPaths = base + 'vendor/ort/';
@@ -23,7 +24,7 @@ ort.env.logLevel = 'error';
 
 // Model files. Bump a version when its ONNX files change so the browser cache is refreshed.
 // chunks: the file is stored as name.onnx.0, name.onnx.1, ... (GitHub Pages limits file size) and joined here.
-const BLAST_SIZE = 2142772;
+const BLAST_SIZE = 2142772, SWIN_SIZE = 276715476;
 export const MODELS = {
   sahvai: { label: 'SAHVAI (BrainHemoAI Hybrid 2D/3D UNet)', version: 'v2', dir: 'models/',
     files: Object.fromEntries(Object.entries({ p1: 33368, p2: 57861, p3: 374005, p4: 223749, p5: 3285, pm: 25650461, p6: 107413, p7: 57861, p8: 1023 }).map(([k, s]) => [k, { size: s }])) },
@@ -31,8 +32,9 @@ export const MODELS = {
     files: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`blast_m${i + 1}`, { size: BLAST_SIZE }])) },
   claim: { label: 'CLAIM nnU-Net 2D', version: 'c1', dir: 'models/claim/', files: { claim2d: { size: 92701875, chunks: 2 } } },
   deepbleed: { label: 'DeepBleed V-Net', version: 'd2', dir: 'models/deepbleed/', files: { deepbleed: { size: 90242129, chunks: 2 } } },
+  sahswin: { label: 'SAH Swin UNETR (Valladolid)', version: 's1', dir: 'models/sahswin/', files: { sahswin: { size: SWIN_SIZE, chunks: 3 } } },
 };
-const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6], deepbleed: [1] };
+const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6], deepbleed: [1], sahswin: [1] };
 // DeepBleed segments ICH + IVH: the reference classes it is compared with, per label scheme
 const REF_ICH = { blast: [1, 4], claim: [2, 4], sahvai: [2, 3] };
 
@@ -203,7 +205,23 @@ async function runModel(model, g, S, dev, data) {
     const r = await runDeepBleed(g, brain, tpl, { call, refine: o.refine !== false, log, stage: st });
     return { ...r, mask: brain };
   }
+  if (model === 'sahswin') {
+    let brain;
+    if (data._stripped) brain = await brainMaskFor(data._vol, SW_GRID);
+    else {
+      stage('Extracting the brain', 0);
+      const g5 = await toGrid(data._vol, () => {}, () => {}, { geometry: true });
+      brain = mapMask(extractBrain(g5, log, f => stage('Extracting the brain', f)), g5, g);
+    }
+    swTpl ||= await loadSwinTemplate(await niftiVolume(await fileOf('models/sahswin/ct_template2mni_2mm.nii.gz', 'the SAH Swin UNETR template')));
+    const r = await runSahSwin(g, brain, swTpl, { call, identity: inTemplateSpace(g, swTpl), log, stage: st });
+    return { ...r, mask: brain };
+  }
 }
+
+// SAH Swin UNETR: the scan at its own in-plane resolution, slices >= 1 mm (a scan already in the 1 mm template space stays as it is)
+const SW_GRID = { spacing: sp => [sp[0], sp[1], Math.max(sp[2], 1)], align: 'extent', interp: 'auto', label: 'SAH Swin UNETR', geometry: true };
+let swTpl = null;
 
 // DeepBleed: the network input is sampled from the scan at its own in-plane resolution and slice spacing (>= 1.25 mm)
 const DB_GRID = { spacing: sp => [sp[0], sp[1], Math.max(sp[2], 1.25)], align: 'extent', interp: 'auto', label: 'DeepBleed', geometry: true };
@@ -222,7 +240,7 @@ function mapMask(m, a, b) {   // nearest-neighbour transfer of a mask between tw
   return out;
 }
 
-const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID, deepbleed: DB_GRID };
+const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID, deepbleed: DB_GRID, sahswin: SW_GRID };
 function modelFiles(model, opts = {}) {
   if (model === 'blast') return Object.keys(MODELS.blast.files).slice(0, opts.ensemble ? 12 : 1);
   return Object.keys(MODELS[model].files);
@@ -243,8 +261,9 @@ async function handle(data) {
   try {
     // DeepBleed always runs on the CPU: its 128^3 3D V-Net returns an empty (all-zero) output on WebGPU in current
     // ONNX Runtime Web / browser combinations, and is slower there than multi-threaded WebAssembly anyway
-    let device = model === 'deepbleed' ? 'wasm' : await pickDevice(data.device);
-    if (model === 'deepbleed' && data.device !== 'wasm') log('DeepBleed runs on the CPU (WebAssembly): its 3D network is unreliable and slower on WebGPU');
+    const cpuOnly = model === 'deepbleed' || model === 'sahswin';
+    let device = cpuOnly ? 'wasm' : await pickDevice(data.device);
+    if (cpuOnly && data.device !== 'wasm') log(`${MODELS[model].label} runs on the CPU (WebAssembly): its 3D network is unreliable on WebGPU`);
     const names = modelFiles(model, data.opts);
     const ready = getSessions(model, names, device).catch(e => e);
     stage('Reading the scan', 0);
@@ -278,7 +297,7 @@ async function handle(data) {
       res = await runModel(model, g, S, device, data);
     }
     const warnings = [...(res.warnings || [])]; if (warnHU) warnings.unshift(warnHU);
-    if (stripped && model !== 'deepbleed') warnings.unshift('This scan is skull-stripped (brain only, background 0), as in the RHUH dataset. The models were trained on whole-head CT, so the background was set to air (-1000 HU)' + (model === 'sahvai' ? ' and the brain mask was taken from the scan' : '') + '; treat the result as approximate.');
+    if (stripped && model !== 'deepbleed' && model !== 'sahswin') warnings.unshift('This scan is skull-stripped (brain only, background 0), as in the RHUH dataset. The models were trained on whole-head CT, so the background was set to air (-1000 HU)' + (model === 'sahvai' ? ' and the brain mask was taken from the scan' : '') + '; treat the result as approximate.');
     const scheme = data.gtScheme || (gt && gt.max <= 1 ? 'binary' : model);
     const comparison = gt ? compare(model, res.labels, gt.labels, scheme, g.sp) : null;
     if (comparison) log(`vs reference: any-blood Dice ${comparison.blood.dice == null ? 'n/a' : comparison.blood.dice.toFixed(3)} (model ${comparison.blood.model_mL.toFixed(1)} mL, reference ${comparison.blood.reference_mL.toFixed(1)} mL)`);
@@ -290,7 +309,7 @@ async function handle(data) {
     if (gt) transfer.push(gt.labels.buffer);
     self.postMessage({ type: 'result', id: cur.id, model, grid, labels: res.labels, mask: res.mask || null, gt: gt ? gt.labels : null, gtName: gt ? gt.name : null,
       comparison, volumes: res.volumes, angle: res.angle, slices: res.slices, windows: res.windows, mode: res.mode, mirror: res.mirror, nModels: model === 'blast' ? names.length : undefined,
-      tiles: res.tiles, passes: res.passes, transform: res.transform, warnings, info, device, seconds }, transfer);
+      tiles: res.tiles, passes: res.passes, transform: res.transform, template_mL: res.template_mL, warnings, info, device, seconds }, transfer);
   } catch (e) {
     console.error(e);
     post('error', { msg: e && e.message ? e.message : String(e) });
