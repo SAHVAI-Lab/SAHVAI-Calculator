@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepBleed ICH segmentation in the browser</title>
+<meta name="description" content="The open-source 3D network for intracerebral hemorrhage from the MISTIE trial investigators at Johns Hopkins (Sharrock et al., Neuroinformatics 2021): ICH and IVH segmentation and volume on non-contrast head CT. Everything runs on this computer. Research and education use only.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style-models.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body data-page="deepbleed">
+<header class="top">
+  <div class="wrap">
+    <h1>DeepBleed ICH <span>in the browser</span></h1>
+    <p>The open-source 3D network for intracerebral hemorrhage from the MISTIE trial investigators at Johns Hopkins (Sharrock et al., <i>Neuroinformatics</i> 2021): ICH and IVH segmentation and volume on non-contrast head CT. Everything runs on this computer.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="deepbleed.html" aria-current="page">DeepBleed ICH</a><a href="rhuh.html">RHUH dataset</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research and education use only</h2>
+      <p>A research demonstration, not a medical device. This model is not validated or approved for clinical use here; do not use it for diagnosis, treatment or any other clinical decision. Segmentations can be wrong; always review them against the images.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this computer</h2>
+      <p>Files are read and processed inside this browser tab on your GPU or CPU. No image data or results are uploaded. Only the page, the model files and the demo cases are downloaded, and the model is cached for later visits.</p>
+    </div>
+    <div class="note">
+      <h2>What you need</h2>
+      <ul>
+        <li>A recent desktop Chrome or Edge (Firefox and Safari may work on the CPU).</li>
+        <li>8 GB RAM or more. WebGPU is fastest; on the CPU a scan takes one to several minutes.</li>
+        <li>A <b>non-contrast axial head CT</b> in Hounsfield units.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section class="panel " id="panel-deepbleed" aria-labelledby="h-deepbleed">
+    <header class="phead">
+      <span class="num">D</span>
+      <div><h2 id="h-deepbleed">DeepBleed <span>MISTIE trial investigators · 3D V-Net for ICH</span></h2><p class="sub">Intracerebral and intraventricular hemorrhage (one combined class) on non-contrast head CT, with volume: the first open-source 3D network for ICH segmentation, trained on MISTIE II and validated on MISTIE III (Dice 0.91).</p></div>
+      <span class="origin">Sharrock, Hanley, Muschelli et al. · Johns Hopkins (BIOS)</span>
+    </header>
+    <div class="opts">
+      <label title="As DeepBleed (ANTs): after aligning the centres of mass, refine the rigid registration by mutual information"><input class="refine" type="checkbox" checked> Refine the registration (mutual information)</label>
+      <span class="small">90.2 MB model download, cached after the first run.</span>
+    </div>
+    <div class="note small-note">Not the same task as SAHVAI or CLAIM: DeepBleed was trained on spontaneous ICH with or without IVH (MISTIE II) and labels <b>ICH and IVH as one class</b>; subarachnoid or subdural blood is not its target. The brain is extracted with SAHVAI's method (DeepBleed uses FSL BET, which cannot run in a browser); tick <i>Brain outline</i> in the viewer to check it.</div>
+    <div class="drop" tabindex="0">
+      <p class="big"><b>Drop a head CT here</b></p>
+      <p class="hint">A zip of a DICOM study, a DICOM folder, loose DICOM files, a .nii / .nii.gz or a .nrrd volume. The brain is aligned to DeepBleed’s 1.5 mm, 128³ CT template, segmented there and mapped back to the scan.</p>
+      <div class="buttons">
+        <label class="btn">Choose file(s)<input class="f-files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label>
+        <label class="btn">Choose folder<input class="f-folder" type="file" webkitdirectory></label>
+        <button class="btn ghost" type="button" data-demo="0">Demo: MISTIE/CLEAR ICH case</button><button class="btn ghost" type="button" data-demo="1">Demo: BHSD ICH + IVH (labels)</button><button class="btn ghost" type="button" data-demo="2">Demo: BLAST-CT contusions (labels)</button>
+      </div>
+      <div class="gtrow"><label class="btn small ghost">Optional: reference labels (.nii.gz)<input class="f-gt" type="file" accept=".nii,.gz,.nrrd"></label>
+      <span class="small">reference: <b class="gtname">none</b> · must share the scan's geometry; Dice is reported per class</span></div>
+    </div>
+    <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
+    <div class="results" hidden>
+      <div class="vols"></div>
+      <div class="warnbox" hidden></div>
+      <div class="cmp" hidden></div>
+      <div class="viewerhost viewer"></div>
+      <div class="details"></div>
+    </div>
+    <div class="cite"><h3>Citation, licence and disclaimer</h3>
+    <p><b>Model.</b> Sharrock MF, Mould WA, Ali H, Hildreth M, Awad IA, Hanley DF, Muschelli J. 3D deep neural network segmentation of intracerebral hemorrhage: development and validation for clinical trials. <i>Neuroinformatics</i> 2021;19(3):403–415. <a href="https://doi.org/10.1007/s12021-020-09493-5">doi:10.1007/s12021-020-09493-5</a>. External validation: <i>External validation and retraining of DeepBleed: the first open-source 3D deep learning network for the segmentation of spontaneous intracerebral and intraventricular hemorrhage.</i> J Clin Med 2023 (median Dice 0.84 in 1,040 patients).</p>
+    <p><b>Code and weights.</b> <a href="https://github.com/msharrock/deepbleed">github.com/msharrock/deepbleed</a>, MISTIE-2 weights linked from its README. Licensed <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">CC BY-NC-ND 4.0</a> (attribution, non-commercial, no derivatives); “This software is not intended for clinical use.” The V-Net weights are converted to ONNX in full precision without any change (a format conversion: same numbers, ONNX output matches TensorFlow on the same checkpoint with 0 voxels different); the 1.5 mm CT template is DeepBleed’s, unchanged. V-Net: Milletari F, Navab N, Ahmadi SA. 3DV 2016.</p>
+    <p><b>Demo data.</b> Case 01 of: Hanley D, Mould WA, Ullman N, Muschelli J. Head CT scans associated with “Validated automatic brain extraction of head CT images”. Johns Hopkins Research Data Repository, V1, 2019. <a href="https://doi.org/10.7281/T1/CZDPSX">doi:10.7281/T1/CZDPSX</a> (MISTIE II/III and CLEAR III scans), <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>, unchanged; see Muschelli J, et al. <i>NeuroImage</i> 2015;114:379–385. The BHSD and BLAST-CT demo cases and labels are those of the CLAIM and BLAST-CT pages.</p>
+    <p><b>How it runs here.</b> As DeepBleed’s <code>predict.py</code>: brain-only image (outside 0) → rigid registration to the template (centres of mass, then mutual information, as ANTs) → linear resampling to 128³ at 1.5 mm → V-Net → mask &gt; 0.5 → mapped back to the scan (linear interpolation of the mask ≥ 0.5, as ANTs’ genericLabel). It reproduces a quirk of the original that the network was trained with: the scan reaches ANTs turned 180° about the vertical axis. With the same brain mask, this port agrees with the original pipeline at Dice 0.93 (15.2 vs 15.1 mL) on the MISTIE demo; differences come from the registration and, without that mask, from the brain extraction.</p>
+    <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use; must not be used for diagnosis, triage, treatment or any other clinical decision. Outputs can be wrong and must be reviewed against the images by a qualified reader. Provided "as is" without warranty of any kind. Images are processed locally in this browser and are not uploaded.</p></div>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+</main>
+
+<footer class="wrap">
+  <p><b>Research and education use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p><b>Acknowledgements.</b> We thank Dr Matthew Sharrock, Dr John Muschelli, Dr Daniel Hanley and the MISTIE investigators for publishing DeepBleed (<a href="LICENSE.md#deepbleed-cc-by-nc-nd-40">CC BY-NC-ND 4.0</a>) and the MISTIE/CLEAR head CT data (CC BY-NC 4.0). Inclusion here does not imply endorsement of this site by these groups.</p>
+  <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0), which runs <a href="https://doi.org/10.1126/science.aec6129">RADAR</a> (Zhang, Ding et al., Science 2026). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app-models.js"></script>
+</body>
+</html>

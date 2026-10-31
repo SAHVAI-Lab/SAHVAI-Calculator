@@ -18,5 +18,6 @@ This folder bundles the following open-source software (in `vendor/`), taken fro
 - BrainHemoAI Hybrid 2D/3D UNet weights and demo scan (models/, demo/brainhemoai-demo-head.nrrd), MIT License, https://github.com/BrainHemo/BrainHemoAI
 - BLAST-CT DeepMedic weights and scan_0 (models/blast/, demo/blast/), Apache License 2.0, Copyright 2020 Imperial College London, https://github.com/biomedia-mira/blast-ct (licenses/Apache-2.0-blast-ct.txt)
 - CLAIM aSAH multiclass nnU-Net weights and BHSD demo cases (models/claim/, demo/claim/), CC BY-NC 4.0, https://github.com/claim-berlin/aSAH-multiclass-segmentation, https://doi.org/10.5281/zenodo.12579491 (licenses/CC-BY-NC-4.0-claim.md)
+- DeepBleed V-Net weights and CT template (models/deepbleed/), CC BY-NC-ND 4.0, https://github.com/msharrock/deepbleed (licenses/CC-BY-NC-ND-4.0-deepbleed.md); MISTIE/CLEAR demo CT (demo/deepbleed/), CC BY-NC 4.0, https://doi.org/10.7281/T1/CZDPSX
 
 See LICENSE.md for attribution and the changes made.

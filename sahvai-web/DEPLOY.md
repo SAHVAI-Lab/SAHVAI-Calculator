@@ -14,9 +14,10 @@ Version 2.1 · 25 October 2026 (four pages: SAHVAI / BrainHemoAI, CLAIM, BLAST-C
 | `models/` | SAHVAI: the Hybrid 2D/3D UNet as nine ONNX parts (26.5 MB, float16 weights) |
 | `models/blast/` | BLAST-CT: the 12 BLAST-CT DeepMedic models (2.1 MB each, float16; Apache-2.0) |
 | `models/claim/` | CLAIM: the CLAIM nnU-Net 2D model in two parts (92.7 MB, float16; CC BY-NC 4.0) |
+| `models/deepbleed/` | DeepBleed: the V-Net in two parts (90.2 MB, float32, unchanged weights; CC BY-NC-ND 4.0) and its 1.5 mm CT template |
 | `vendor/` | ONNX Runtime Web 1.30 and DICOM image codecs (all local) |
 | `coi-serviceworker.js` | enables multi-threading when the server cannot send the headers below |
-| `demo/` | public demo cases: BrainHemoAI `head.nrrd`, three BHSD cases from the CLAIM repository with labels, BLAST-CT `scan_0` with labels |
+| `demo/` | public demo cases: BrainHemoAI `head.nrrd`, three BHSD cases from the CLAIM repository with labels, BLAST-CT `scan_0` with labels, one MISTIE/CLEAR ICH scan (JHU, CC BY-NC 4.0) |
 | `licenses/` | full licence texts for BLAST-CT (Apache-2.0) and CLAIM (CC BY-NC 4.0) |
 | `tools/` | Python scripts that rebuild the ONNX parts from the original PyTorch weights |
 | `serve.py` | a standard-library Python server with the right headers |
@@ -41,7 +42,7 @@ It is a static site: copy the folder to any web server. Four requirements:
    `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
    (Without them `coi-serviceworker.js` adds them on first load; with them it is not needed.)
 3. **MIME types**: `.wasm` → `application/wasm`, `.mjs` / `.js` → `text/javascript`.
-4. Allow files up to ~50 MB (`models/claim/claim2d.onnx.0` and `.1`, `models/pm.onnx`, the runtime `.wasm`).
+4. Allow files up to ~50 MB (`models/claim/claim2d.onnx.0` and `.1`, `models/deepbleed/deepbleed.onnx.0` and `.1`, `models/pm.onnx`, the runtime `.wasm`).
 
 nginx:
 

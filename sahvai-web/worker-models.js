@@ -1,6 +1,6 @@
-// SAHVAI Web model pages (CLAIM, BLAST-CT, RHUH dataset): runs the model pipelines off the main thread. One job at a time; sessions are kept per model.
+// SAHVAI Web model pages (CLAIM, BLAST-CT, DeepBleed, RHUH dataset): runs the model pipelines off the main thread. One job at a time; sessions are kept per model.
 // In:  {job: 'preload', model, device}
-//      {job: 'run', id, model: 'sahvai'|'claim'|'blast', device, files | demo (url), gt (File | url), gtScheme, opts}
+//      {job: 'run', id, model: 'sahvai'|'claim'|'blast'|'deepbleed', device, files | demo (url), gt (File | url), gtScheme, opts}
 // Out: {type: 'log'|'progress'|'ready'|'result'|'error', id, model, ...}
 import * as ort from './vendor/ort/ort.webgpu.min.mjs';
 import { openInput } from './lib/source.js';
@@ -13,6 +13,8 @@ import { PARTS } from './lib/unet.js';
 import { runBlast, BLAST_GRID } from './lib/blast.js';
 import { runClaim, CLAIM_GRID, CLAIM_INPUT_GRID } from './lib/claim.js';
 import { detectStripped, airBackground, brainMaskFor } from './lib/stripped.js';
+import { extractBrain } from './lib/brain.js';
+import { loadTemplate, runDeepBleed } from './lib/deepbleed.js';
 
 const base = new URL('./', import.meta.url).href;
 ort.env.wasm.wasmPaths = base + 'vendor/ort/';
@@ -28,8 +30,11 @@ export const MODELS = {
   blast: { label: 'BLAST-CT (DeepMedic)', version: 'b1', dir: 'models/blast/',
     files: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`blast_m${i + 1}`, { size: BLAST_SIZE }])) },
   claim: { label: 'CLAIM nnU-Net 2D', version: 'c1', dir: 'models/claim/', files: { claim2d: { size: 92701875, chunks: 2 } } },
+  deepbleed: { label: 'DeepBleed V-Net', version: 'd1', dir: 'models/deepbleed/', files: { deepbleed: { size: 90195721, chunks: 2 } } },
 };
-const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6] };
+const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6], deepbleed: [1] };
+// DeepBleed segments ICH + IVH: the reference classes it is compared with, per label scheme
+const REF_ICH = { blast: [1, 4], claim: [2, 4], sahvai: [2, 3] };
 
 let cur = { id: 0, model: '' };
 const post = (type, x = {}) => self.postMessage({ type, id: cur.id, model: cur.model, ...x });
@@ -158,12 +163,13 @@ function compare(model, labels, gt, scheme, sp) {
   if (scheme === 'bhsd') {
     mapped = 'bhsd';
     const m = new Uint8Array(gt.length); for (let i = 0; i < gt.length; i++) m[i] = BHSD_TO_CLAIM[gt[i]] ?? 0;
-    gt = m; scheme = model === 'claim' ? 'claim' : 'binary';
+    gt = m; scheme = model === 'claim' || model === 'deepbleed' ? 'claim' : 'binary';
   }
-  const refBlood = scheme === 'binary' ? new Set(Array.from({ length: 255 }, (_, i) => i + 1)) : new Set([...BLOOD[scheme], ...(scheme === 'claim' ? [7] : [])]);
+  const refBlood = scheme === 'binary' ? new Set(Array.from({ length: 255 }, (_, i) => i + 1))
+    : model === 'deepbleed' && REF_ICH[scheme] ? new Set(REF_ICH[scheme]) : new Set([...BLOOD[scheme], ...(scheme === 'claim' ? [7] : [])]);
   const pa = new Uint8Array(labels.length), pb = new Uint8Array(labels.length); let na = 0, nb = 0;
   for (let i = 0; i < labels.length; i++) { if (B.has(labels[i])) { pa[i] = 1; na++; } if (refBlood.has(gt[i])) { pb[i] = 1; nb++; } }
-  const res = { scheme, mapped, blood: { dice: dice(pa, pb), model_mL: na * vox, reference_mL: nb * vox }, classes: {} };
+  const res = { scheme, mapped, ich_ivh: model === 'deepbleed' && scheme !== 'binary', blood: { dice: dice(pa, pb), model_mL: na * vox, reference_mL: nb * vox }, classes: {} };
   if (scheme === model) {
     const n1 = new Float64Array(256), n2 = new Float64Array(256), both = new Float64Array(256);
     for (let i = 0; i < labels.length; i++) { const p = labels[i], q = gt[i]; n1[p]++; n2[q]++; if (p === q) both[p]++; }
@@ -184,9 +190,39 @@ async function runModel(model, g, S, dev, data) {
     const gi = await toGrid(data._vol, () => {}, f => stage('Preparing the network input', f), CLAIM_INPUT_GRID);
     return runClaim(g, { call, input: gi.hu, mode: o.mode || 'exact', mirror: !!o.mirror, log, stage: st });
   }
+  if (model === 'deepbleed') {
+    // brain mask: the scan's own when it is skull-stripped, else SAHVAI's extraction on its 0.5 x 0.5 x 5 mm grid, mapped here
+    let brain;
+    if (data._stripped) brain = await brainMaskFor(data._vol, DB_GRID);
+    else {
+      stage('Extracting the brain', 0);
+      const g5 = await toGrid(data._vol, () => {}, () => {}, { geometry: true });
+      brain = mapMask(extractBrain(g5, log, f => stage('Extracting the brain', f)), g5, g);
+    }
+    tpl ||= await loadTemplate(await niftiVolume(await fileOf('models/deepbleed/scct_unsmooth_SS_0.01_128x128x128.nii.gz', 'the DeepBleed template')));
+    const r = await runDeepBleed(g, brain, tpl, { call, refine: o.refine !== false, log, stage: st });
+    return { ...r, mask: brain };
+  }
 }
 
-const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID };
+// DeepBleed: the network input is sampled from the scan at its own in-plane resolution and slice spacing (>= 1.25 mm)
+const DB_GRID = { spacing: sp => [sp[0], sp[1], Math.max(sp[2], 1.25)], align: 'extent', interp: 'auto', label: 'DeepBleed', geometry: true };
+let tpl = null;
+function mapMask(m, a, b) {   // nearest-neighbour transfer of a mask between two grids of the same scan (physical space)
+  const A = [0, 1, 2].map(r => a.affine[r].slice(0, 3)), ao = [0, 1, 2].map(r => a.affine[r][3]);
+  const [p, q, s] = A[0], [d, e, f] = A[1], [g2, h, i] = A[2], X = e * i - f * h, Y = -(d * i - f * g2), Z = d * h - e * g2, det = p * X + q * Y + s * Z;
+  const Ai = [[X / det, -(q * i - s * h) / det, (q * f - s * e) / det], [Y / det, (p * i - s * g2) / det, -(p * f - s * d) / det], [Z / det, -(p * h - q * g2) / det, (p * e - q * d) / det]];
+  const out = new Uint8Array(b.nx * b.ny * b.nz);
+  for (let z = 0; z < b.nz; z++) for (let y = 0; y < b.ny; y++) for (let x = 0; x < b.nx; x++) {
+    const v = [0, 1, 2].map(r => b.affine[r][0] * x + b.affine[r][1] * y + b.affine[r][2] * z + b.affine[r][3] - ao[r]);
+    const ix = [0, 1, 2].map(r => Math.round(Ai[r][0] * v[0] + Ai[r][1] * v[1] + Ai[r][2] * v[2]));
+    if (ix[0] < 0 || ix[1] < 0 || ix[2] < 0 || ix[0] >= a.nx || ix[1] >= a.ny || ix[2] >= a.nz) continue;
+    out[(z * b.ny + y) * b.nx + x] = m[(ix[2] * a.ny + ix[1]) * a.nx + ix[0]];
+  }
+  return out;
+}
+
+const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID, deepbleed: DB_GRID };
 function modelFiles(model, opts = {}) {
   if (model === 'blast') return Object.keys(MODELS.blast.files).slice(0, opts.ensemble ? 12 : 1);
   return Object.keys(MODELS[model].files);
@@ -239,7 +275,7 @@ async function handle(data) {
       res = await runModel(model, g, S, device, data);
     }
     const warnings = [...(res.warnings || [])]; if (warnHU) warnings.unshift(warnHU);
-    if (stripped) warnings.unshift('This scan is skull-stripped (brain only, background 0), as in the RHUH dataset. The models were trained on whole-head CT, so the background was set to air (-1000 HU)' + (model === 'sahvai' ? ' and the brain mask was taken from the scan' : '') + '; treat the result as approximate.');
+    if (stripped && model !== 'deepbleed') warnings.unshift('This scan is skull-stripped (brain only, background 0), as in the RHUH dataset. The models were trained on whole-head CT, so the background was set to air (-1000 HU)' + (model === 'sahvai' ? ' and the brain mask was taken from the scan' : '') + '; treat the result as approximate.');
     const scheme = data.gtScheme || (gt && gt.max <= 1 ? 'binary' : model);
     const comparison = gt ? compare(model, res.labels, gt.labels, scheme, g.sp) : null;
     if (comparison) log(`vs reference: any-blood Dice ${comparison.blood.dice == null ? 'n/a' : comparison.blood.dice.toFixed(3)} (model ${comparison.blood.model_mL.toFixed(1)} mL, reference ${comparison.blood.reference_mL.toFixed(1)} mL)`);
@@ -251,7 +287,7 @@ async function handle(data) {
     if (gt) transfer.push(gt.labels.buffer);
     self.postMessage({ type: 'result', id: cur.id, model, grid, labels: res.labels, mask: res.mask || null, gt: gt ? gt.labels : null, gtName: gt ? gt.name : null,
       comparison, volumes: res.volumes, angle: res.angle, slices: res.slices, windows: res.windows, mode: res.mode, mirror: res.mirror, nModels: model === 'blast' ? names.length : undefined,
-      tiles: res.tiles, passes: res.passes, warnings, info, device, seconds }, transfer);
+      tiles: res.tiles, passes: res.passes, transform: res.transform, warnings, info, device, seconds }, transfer);
   } catch (e) {
     console.error(e);
     post('error', { msg: e && e.message ? e.message : String(e) });

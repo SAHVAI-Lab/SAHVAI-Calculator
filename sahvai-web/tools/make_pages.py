@@ -97,6 +97,23 @@ p3 = panel('blast', 'B', 'BLAST-CT <span>Cambridge &amp; Imperial · traumatic b
     <p><b>How it runs here.</b> As blast-ct: reorientation, 1 mm isotropic linear resampling (SimpleITK-style), window −15 to 100 HU scaled to −1…1, three-pathway DeepMedic over tiles, softmax averaged over the chosen models, argmax. Output tiles of 60³ give the same labels as the tool's 30³ tiles (checked: 0 voxels differ).</p>
     {DISCLAIMER}''')
 
+# ---------- DeepBleed ----------
+p5 = panel('deepbleed', 'D', 'DeepBleed <span>MISTIE trial investigators · 3D V-Net for ICH</span>',
+  'Intracerebral and intraventricular hemorrhage (one combined class) on non-contrast head CT, with volume: the first open-source 3D network for ICH segmentation, trained on MISTIE II and validated on MISTIE III (Dice 0.91).',
+  'Sharrock, Hanley, Muschelli et al. · Johns Hopkins (BIOS)',
+  f"""<div class="opts">
+      <label title="As DeepBleed (ANTs): after aligning the centres of mass, refine the rigid registration by mutual information"><input class="refine" type="checkbox" checked> Refine the registration (mutual information)</label>
+      <span class="small">90.2 MB model download, cached after the first run.</span>
+    </div>
+    <div class="note small-note">Not the same task as SAHVAI or CLAIM: DeepBleed was trained on spontaneous ICH with or without IVH (MISTIE II) and labels <b>ICH and IVH as one class</b>; subarachnoid or subdural blood is not its target. The brain is extracted with SAHVAI's method (DeepBleed uses FSL BET, which cannot run in a browser); tick <i>Brain outline</i> in the viewer to check it.</div>
+    {drop('deepbleed', ['Demo: MISTIE/CLEAR ICH case', 'Demo: BHSD ICH + IVH (labels)', 'Demo: BLAST-CT contusions (labels)'], gt=True, hint=' The brain is aligned to DeepBleed’s 1.5 mm, 128³ CT template, segmented there and mapped back to the scan.')}""",
+  f"""<h3>Citation, licence and disclaimer</h3>
+    <p><b>Model.</b> Sharrock MF, Mould WA, Ali H, Hildreth M, Awad IA, Hanley DF, Muschelli J. 3D deep neural network segmentation of intracerebral hemorrhage: development and validation for clinical trials. <i>Neuroinformatics</i> 2021;19(3):403–415. <a href="https://doi.org/10.1007/s12021-020-09493-5">doi:10.1007/s12021-020-09493-5</a>. External validation: <i>External validation and retraining of DeepBleed: the first open-source 3D deep learning network for the segmentation of spontaneous intracerebral and intraventricular hemorrhage.</i> J Clin Med 2023 (median Dice 0.84 in 1,040 patients).</p>
+    <p><b>Code and weights.</b> <a href="https://github.com/msharrock/deepbleed">github.com/msharrock/deepbleed</a>, MISTIE-2 weights linked from its README. Licensed <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">CC BY-NC-ND 4.0</a> (attribution, non-commercial, no derivatives); “This software is not intended for clinical use.” The V-Net weights are converted to ONNX in full precision without any change (a format conversion: same numbers, ONNX output matches TensorFlow on the same checkpoint with 0 voxels different); the 1.5 mm CT template is DeepBleed’s, unchanged. V-Net: Milletari F, Navab N, Ahmadi SA. 3DV 2016.</p>
+    <p><b>Demo data.</b> Case 01 of: Hanley D, Mould WA, Ullman N, Muschelli J. Head CT scans associated with “Validated automatic brain extraction of head CT images”. Johns Hopkins Research Data Repository, V1, 2019. <a href="https://doi.org/10.7281/T1/CZDPSX">doi:10.7281/T1/CZDPSX</a> (MISTIE II/III and CLEAR III scans), <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>, unchanged; see Muschelli J, et al. <i>NeuroImage</i> 2015;114:379–385. The BHSD and BLAST-CT demo cases and labels are those of the CLAIM and BLAST-CT pages.</p>
+    <p><b>How it runs here.</b> As DeepBleed’s <code>predict.py</code>: brain-only image (outside 0) → rigid registration to the template (centres of mass, then mutual information, as ANTs) → linear resampling to 128³ at 1.5 mm → V-Net → mask &gt; 0.5 → mapped back to the scan (linear interpolation of the mask ≥ 0.5, as ANTs’ genericLabel). It reproduces a quirk of the original that the network was trained with: the scan reaches ANTs turned 180° about the vertical axis. With the same brain mask, this port agrees with the original pipeline at Dice 0.93 (15.2 vs 15.1 mL) on the MISTIE demo; differences come from the registration and, without that mask, from the brain extraction.</p>
+    {DISCLAIMER}""")
+
 # ---------- 4 RHUH dataset ----------
 p4 = panel('rhuh', 'R', 'RHUH SAH dataset <span>Cepeda &amp; García-García · Valladolid, Spain</span>',
   'Open non-contrast CT scans of aneurysmal SAH with expert manual bleeding masks. Load one case and its mask, run any of the three models on it and compare with the expert segmentation.',
@@ -144,11 +161,14 @@ PAGES = [
   ('blast', 'blast.html', 'BLAST-CT TBI lesion segmentation in the browser', 'BLAST-CT <span>in the browser</span>',
    'The traumatic brain injury lesion model of the University of Cambridge and Imperial College London (Monteiro et al., <i>Lancet Digit Health</i> 2020): intraparenchymal and extra-axial haemorrhage, perilesional oedema and intraventricular haemorrhage on non-contrast head CT. Use it for SAH after a fall or for traumatic ICH. Everything runs on this computer.', p3,
    'We thank the BLAST-CT authors at the University of Cambridge and Imperial College London for publishing their code and models (<a href="LICENSE.md#blast-ct-apache-20">Apache-2.0</a>).'),
+  ('deepbleed', 'deepbleed.html', 'DeepBleed ICH segmentation in the browser', 'DeepBleed ICH <span>in the browser</span>',
+   'The open-source 3D network for intracerebral hemorrhage from the MISTIE trial investigators at Johns Hopkins (Sharrock et al., <i>Neuroinformatics</i> 2021): ICH and IVH segmentation and volume on non-contrast head CT. Everything runs on this computer.', p5,
+   'We thank Dr Matthew Sharrock, Dr John Muschelli, Dr Daniel Hanley and the MISTIE investigators for publishing DeepBleed (<a href="LICENSE.md#deepbleed-cc-by-nc-nd-40">CC BY-NC-ND 4.0</a>) and the MISTIE/CLEAR head CT data (CC BY-NC 4.0).'),
   ('rhuh', 'rhuh.html', 'RHUH SAH dataset in the browser', 'RHUH SAH dataset <span>in the browser</span>',
    'Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM or BLAST-CT on it and compare with the expert. Everything runs on this computer.', p4,
    'We thank Dr Santiago Cepeda and Dr Sergio García-García for the RHUH dataset (<a href="LICENSE.md#rhuh-dataset">CC BY 4.0</a>), and the BrainHemoAI, CLAIM and BLAST-CT groups for the models it can be compared with.'),
 ]
-NAV = [('index.html', 'SAHVAI (BrainHemoAI)'), ('claim.html', 'CLAIM aSAH'), ('blast.html', 'BLAST-CT'), ('rhuh.html', 'RHUH dataset')]
+NAV = [('index.html', 'SAHVAI (BrainHemoAI)'), ('claim.html', 'CLAIM aSAH'), ('blast.html', 'BLAST-CT'), ('deepbleed.html', 'DeepBleed ICH'), ('rhuh.html', 'RHUH dataset')]
 for pid, fname, title, h1, lede, body, ack in PAGES:
     cur = ' aria-current="page"'
     nav = ''.join(f'<a href="{f}"{cur if f == fname else ""}>{html.escape(t)}</a>' for f, t in NAV)

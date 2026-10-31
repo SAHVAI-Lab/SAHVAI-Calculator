@@ -135,10 +135,11 @@ export async function toGrid(vol, log = () => {}, progress = () => {}, opts = {}
   // affine (LPS) of the output grid: columns = axis direction * spacing, last column = centre of voxel 0
   const dirOut = [0, 1, 2].map(a => vol.dir[perm[a]].map(c => flip[a] ? -c : c));
   let affine = null;
-  if (vol.origin) {
+  if (vol.origin || opts.geometry) {   // opts.geometry: a relative affine (origin 0) when the scan has no position
+    const org = vol.origin || [0, 0, 0];
     const idx0 = [0, 0, 0];   // source (unflipped) index of output voxel 0's centre, per source axis
     for (let a = 0; a < 3; a++) { const u = align === 'corner' ? 0 : 0.5 * tgtExact[a] / sp[a] - 0.5; idx0[perm[a]] = flip[a] ? n[a] - 1 - u : u; }
-    const o = [0, 1, 2].map(c => vol.origin[c] + idx0.reduce((acc, u, s) => acc + u * vol.spacing[s] * vol.dir[s][c], 0));
+    const o = [0, 1, 2].map(c => org[c] + idx0.reduce((acc, u, s) => acc + u * vol.spacing[s] * vol.dir[s][c], 0));
     affine = [0, 1, 2].map(c => [dirOut[0][c] * tgtExact[0], dirOut[1][c] * tgtExact[1], dirOut[2][c] * tgtExact[2], o[c]]).concat([[0, 0, 0, 1]]);
   }
   log(`working grid ${nx}x${ny}x${nz} in ${((performance.now() - t0) / 1000).toFixed(1)}s`);

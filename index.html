@@ -160,6 +160,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <button class="tab-btn" onclick="showTab('web3d')">SAHVAI 3D-4D</button>
   <button class="tab-btn" onclick="showTab('claim')">CLAIM aSAH (AI)</button>
   <button class="tab-btn" onclick="showTab('blast')">BLAST-CT (AI)</button>
+  <button class="tab-btn" onclick="showTab('deepbleed')">DeepBleed ICH (AI)</button>
   <button class="tab-btn" onclick="showTab('rhuh')">RHUH Dataset</button>
   <button class="tab-btn" onclick="showTab('mm')">SAHVAI-MM</button>
 </div>
@@ -559,6 +560,22 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 
 <div class="card" style="padding:0;overflow:hidden;">
   <iframe id="blastWebFrame" data-src="sahvai-web/blast.html" title="BLAST-CT in the browser" style="width:100%;height:1600px;border:0;display:block;" loading="lazy"></iframe>
+</div>
+
+</div>
+
+<!-- ==================== DEEPBLEED ICH IN THE BROWSER TAB ==================== -->
+<div id="tab-deepbleed" class="tab-content">
+
+<div class="card" style="background:linear-gradient(135deg,var(--mayo-dark),var(--mayo-blue));color:#fff;text-align:center;padding:1.5rem;">
+  <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;">DeepBleed &mdash; ICH segmentation in your browser</h3>
+  <p style="font-size:0.85rem;opacity:0.9;max-width:860px;margin:0 auto 0.75rem;">The open-source 3D V-Net for intracerebral hemorrhage from the MISTIE trial investigators at Johns Hopkins (Sharrock et al., <i>Neuroinformatics</i> 2021): ICH + IVH segmentation and volume, trained on MISTIE II and validated on MISTIE III. CC BY-NC-ND 4.0 (non-commercial). Runs locally; images are never uploaded.</p>
+  <a href="sahvai-web/deepbleed.html" target="_blank" rel="noopener" style="display:inline-block;background:#fff;color:var(--mayo-blue);font-weight:700;font-size:0.85rem;padding:0.45rem 1.1rem;border-radius:8px;text-decoration:none;">Open full screen &#8599;</a>
+  <p style="font-size:0.72rem;opacity:0.8;margin-top:0.6rem;">Research and education use only &mdash; not a medical device. Embedded below, CPU mode runs on one thread; open full screen for multi-threaded CPU (WebGPU is fast in both).</p>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <iframe id="deepbleedWebFrame" data-src="sahvai-web/deepbleed.html" title="DeepBleed ICH in the browser" style="width:100%;height:1600px;border:0;display:block;" loading="lazy"></iframe>
 </div>
 
 </div>

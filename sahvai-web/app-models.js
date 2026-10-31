@@ -1,4 +1,4 @@
-// SAHVAI Web model pages: claim.html, blast.html and rhuh.html (one panel each) share this script and worker-models.js.
+// SAHVAI Web model pages: claim.html, blast.html, deepbleed.html and rhuh.html (one panel each) share this script and worker-models.js.
 // The SAHVAI / BrainHemoAI page itself (index.html) uses the original app.js and worker.js.
 import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
@@ -33,17 +33,24 @@ const CLASSES = {
     4: C('ICH', 'intracerebral', [255, 45, 120]), 5: C('Aneurysm', 'aneurysm', [190, 90, 255]), 6: C('SDH', 'subdural', [80, 220, 120]) },
   blast: { 1: C('IPH', 'intraparenchymal', [255, 45, 120]), 2: C('EAH', 'extra-axial (SAH, SDH, EDH)', [255, 176, 0]), 3: C('Oedema', 'perilesional oedema', [80, 220, 120]),
     4: C('IVH', 'intraventricular', [30, 200, 255]) },
+  deepbleed: { 1: C('ICH + IVH', 'intracerebral and intraventricular (one class)', [255, 45, 120]) },
 };
-const BLOOD = { sahvai: [1, 2, 3], claim: [1, 2, 4, 6], blast: [1, 2, 4] };
+const BLOOD = { sahvai: [1, 2, 3], claim: [1, 2, 4, 6], blast: [1, 2, 4], deepbleed: [1] };
 const MODEL_NAME = {
   sahvai: 'Hybrid 2D/3D UNet (Hu et al., NeuroImage 2023;279:120321), BrainHemoAI weights, MIT License',
   claim: 'nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., Front Neurol 2024;15:1490216), CLAIM Charité weights, CC BY-NC 4.0',
   blast: 'BLAST-CT DeepMedic (Monteiro et al., Lancet Digit Health 2020;2:e314-22), biomedia-mira weights, Apache-2.0',
+  deepbleed: 'DeepBleed 3D V-Net (Sharrock et al., Neuroinformatics 2021;19:403-415), MISTIE-2 weights, CC BY-NC-ND 4.0 (format conversion only)',
 };
 
 function volumesFor(model, r) {
   const v = r.volumes, cl = CLASSES[model];
   if (model === 'sahvai') return [...Object.values(cl).map(c => [c.key, v[c.key], c.name, c.color]), ['Total blood', v.total, 'SAH + IPH + IVH', null, 'total']];
+  if (model === 'deepbleed') {
+    let b = 0; if (r.mask) for (let i = 0; i < r.mask.length; i++) b += r.mask[i];
+    const vox = r.grid.sp[0] * r.grid.sp[1] * r.grid.sp[2] / 1000;
+    return [['Brain mask', b * vox, 'extracted brain the network sees', [60, 230, 90]], ['ICH + IVH', v.ICH, 'DeepBleed hemorrhage volume', null, 'total']];
+  }
   const cards = Object.entries(cl).map(([, c]) => [c.key, v[c.key], c.name, c.color]);
   const tot = BLOOD[model].reduce((a, i) => a + (v[cl[i].key] || 0), 0);
   cards.push(['Total blood', tot, BLOOD[model].map(i => cl[i].key).join(' + '), null, 'total']);
@@ -162,9 +169,9 @@ class Panel {
 
 function comparisonHTML(model, c, name) {
   const cl = CLASSES[model], d = x => x == null ? '–' : x.toFixed(3);
-  const rows = [`<tr><th>Any blood</th><td>${d(c.blood.dice)}</td><td>${mL(c.blood.model_mL)}</td><td>${mL(c.blood.reference_mL)}</td></tr>`];
+  const rows = [`<tr><th>${c.ich_ivh ? 'ICH + IVH' : 'Any blood'}</th><td>${d(c.blood.dice)}</td><td>${mL(c.blood.model_mL)}</td><td>${mL(c.blood.reference_mL)}</td></tr>`];
   for (const [id, x] of Object.entries(c.classes)) rows.push(`<tr><th>${esc(cl[id] ? cl[id].key : +id === 7 ? 'EDH (reference only)' : `label ${id}`)}</th><td>${d(x.dice)}</td><td>${mL(x.model_mL)}</td><td>${mL(x.reference_mL)}</td></tr>`);
-  return `<h3>Agreement with the reference labels <small>${esc(name || '')}${c.scheme === 'binary' ? ' · binary mask: compared as any blood' : ''}${c.mapped === 'bhsd' ? ' · BHSD labels mapped to CLAIM classes' : ''}</small></h3>
+  return `<h3>Agreement with the reference labels <small>${esc(name || '')}${c.scheme === 'binary' ? ' · binary mask: compared as any blood' : ''}${c.mapped === 'bhsd' ? ' · BHSD labels mapped to CLAIM classes' : ''}${c.ich_ivh ? ' · compared with the reference ICH + IVH (SAH, SDH and oedema excluded)' : ''}</small></h3>
     <table><thead><tr><th></th><th>Dice</th><th>Model mL</th><th>Reference mL</th></tr></thead><tbody>${rows.join('')}</tbody></table>
     <p class="small">The reference outline is drawn in white on the image. Dice is computed on the model grid.</p>`;
 }
@@ -191,6 +198,17 @@ const CONFIG = {
     getOpts: q => ({ ensemble: q.querySelector('input[name=blast-ens]:checked').value === '12' }),
     details: r => [`${r.tiles} tiles of 60³ mm, ${r.nModels === 12 ? 'ensemble of 12 models' : 'single model (blast-ct default)'}`],
     extra: r => ({ inference: { models: r.nModels, tiles: r.tiles } }),
+  },
+  deepbleed: {
+    id: 'deepbleed', model: 'deepbleed', title: 'DeepBleed', prefix: 'deepbleed',
+    demos: [
+      { url: 'demo/deepbleed/jhu_mistie_01_ct.nii.gz', name: 'MISTIE/CLEAR ICH case 01 (JHU, CC BY-NC 4.0)' },
+      { url: 'demo/claim/SAH_002_0000.nii.gz', gt: 'demo/claim/SAH_002_gt.nii.gz', gtScheme: 'bhsd', name: 'BHSD case SAH_002 (ICH + IVH + SAH, with labels)' },
+      { url: 'demo/blast/scan_0_image.nii.gz', gt: 'demo/blast/scan_0_segmentation.nii.gz', gtScheme: 'blast', name: 'BLAST-CT scan_0 (traumatic contusions, with labels)' },
+    ],
+    getOpts: q => ({ refine: q.querySelector('.refine').checked }),
+    details: r => [`registration to the 1.5 mm template: ${r.transform && r.transform.refine ? 'centre of mass + mutual information' : 'centre of mass'}${r.transform ? ` (rotation ${r.transform.rotation_deg.map(v => v.toFixed(1)).join('/')}°, shift ${r.transform.shift_mm.map(v => v.toFixed(1)).join('/')} mm)` : ''}`],
+    extra: r => ({ registration: r.transform, note: 'labels: 1 = hemorrhage (ICH + IVH); brain mask from SAHVAI extraction, not FSL BET' }),
   },
 };
 for (const k of Object.keys(CONFIG)) if ($(`panel-${k}`)) panels[k] = new Panel(CONFIG[k]);
@@ -267,3 +285,4 @@ if (pre) {
   document.querySelectorAll('input[name=device]').forEach(el => el.addEventListener('change', () => { if (!busy) worker.postMessage({ job: 'preload', model: pre, device: device() }); }));
 }
 if (panels.claim) panels.claim.setStage('The CLAIM model (92.7 MB) downloads on the first run and is then cached by the browser.', 0);
+if (panels.deepbleed) panels.deepbleed.setStage('The DeepBleed model (90.2 MB) downloads on the first run and is then cached by the browser.', 0);

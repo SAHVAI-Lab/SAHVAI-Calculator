@@ -2,19 +2,20 @@
 
 **https://sahvai-lab.github.io/SAHVAI-Calculator/sahvai-web/** (also the *SAHVAI Web (AI)* tab of the [SAHVAI Calculator](https://sahvai-lab.github.io/SAHVAI-Calculator/))
 
-Five pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the SAHVAI 3D-4D page (`3d.html`, `app-3d.js`) reuses its `worker.js`; the other three (`claim.html`, `blast.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
+Six pages, each its own tab in the SAHVAI Calculator, all running entirely in the browser with ONNX Runtime Web (WebGPU, or the CPU via multi-threaded WebAssembly). Each has drag-and-drop for DICOM / NIfTI / NRRD, a demo case, an axial viewer with per-slice volumes, downloads, and its citation, licence and disclaimer. The SAHVAI page (`index.html`, `app.js`, `worker.js`) is the original BrainHemoAI tool and loads only that model; the SAHVAI 3D-4D page (`3d.html`, `app-3d.js`) reuses its `worker.js`; the other four (`claim.html`, `blast.html`, `deepbleed.html`, `rhuh.html`) share `app-models.js`, `worker-models.js` and `style-models.css`, and each loads only its own model.
 
 | page | model / data | from | classes | licence |
 |---|---|---|---|---|
 | SAHVAI (`index.html`) | Hybrid 2D/3D UNet, BrainHemoAI weights (Hu et al., *NeuroImage* 2023) | BrainHemoAI | SAH, IPH, IVH | MIT (with permission) |
 | CLAIM aSAH (`claim.html`) | nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., *Front Neurol* 2024) | CLAIM, Charité Berlin | SAH, IVH, ventricles, ICH, aneurysm, SDH | CC BY-NC 4.0 |
 | BLAST-CT (`blast.html`) | DeepMedic, 1 or 12 models (Monteiro et al., *Lancet Digit Health* 2020) | Cambridge / Imperial College London | IPH, extra-axial haemorrhage, oedema, IVH (traumatic brain injury) | Apache-2.0 |
+| DeepBleed ICH (`deepbleed.html`) | 3D V-Net, MISTIE-2 weights (Sharrock et al., *Neuroinformatics* 2021) | MISTIE investigators, Johns Hopkins | ICH + IVH (one class) | CC BY-NC-ND 4.0 |
 | SAHVAI 3D-4D (`3d.html`) | the SAHVAI model above, plus 3D surfaces (three.js) and volumes over serial scans | SAHVAI Lab | SAH, IPH, IVH in 3D; volume vs date | MIT (with permission) |
 | RHUH dataset (`rhuh.html`) | open aSAH NCCT scans with expert bleeding masks (Cepeda & García-García, Zenodo 2023) | Río Hortega University Hospital, Valladolid | expert mask vs any of the three models (Dice, volumes) | CC BY 4.0 (data not hosted here) |
 
 The design follows [RADAR in the browser](https://github.com/jarrelscy/radar-web), the browser port of Alibaba DAMO Academy's RADAR abdominal CT model (Zhang, Ding et al., *Science* 2026).
 
-Images never leave the computer: files are read and processed in the browser tab and nothing is uploaded. Models are served from this site and cached by the browser (SAHVAI 26.5 MB, BLAST-CT 2.1 MB per model, CLAIM 92.7 MB in two parts).
+Images never leave the computer: files are read and processed in the browser tab and nothing is uploaded. Models are served from this site and cached by the browser (SAHVAI 26.5 MB, BLAST-CT 2.1 MB per model, CLAIM 92.7 MB and DeepBleed 90.2 MB, each in two parts).
 
 > **Research and education use only.** This is not a medical device. None of these models has been validated or approved for clinical use in this form; do not use them for diagnosis, triage or treatment decisions. Always review the segmentation against the images.
 
@@ -83,6 +84,24 @@ The pre-trained DeepMedic models of [biomedia-mira/blast-ct](https://github.com/
 
 Validation on `scan_0` from the blast-ct repository: the static ONNX re-implementation matches PyTorch exactly (max difference 0) and ONNX Runtime within 2.3e-6; the JavaScript pipeline (fp32 model) gives the same label map as the `blast-ct` command line in all but **2 of 6.0 M voxels** (IPH 48.0 mL, EAH 23.7 mL, oedema 62.7 mL, IVH 0.3 mL). The fp16 files used on the site change 0.01% of voxels on test tiles. 60³ output tiles give identical labels to the tool's 30³ tiles.
 
+## DeepBleed ICH (MISTIE investigators, Johns Hopkins) — `deepbleed.html`
+
+[msharrock/deepbleed](https://github.com/msharrock/deepbleed) (Sharrock et al., *Neuroinformatics* 2021): a 3D V-Net (22.5 M parameters; each block's 5×5×5 convolution is one layer applied 1–3 times) trained on 100 MISTIE II scans and validated on 500 MISTIE III scans (Dice 0.91), segmenting ICH and IVH as one class. External validation in 1,040 patients: median Dice 0.84 (J Clin Med 2023). Licence CC BY-NC-ND 4.0: the weights are converted to ONNX in full precision without change (`tools/deepbleed_export.py`); see LICENSE.md.
+
+`predict.py` does: FSL BET brain extraction → ANTs rigid registration (Mattes MI) of the brain to a 1.5 mm, 128³ CT template → V-Net → mask > 0.5 → inverse transform (genericLabel) to the scan. `lib/deepbleed.js` reproduces the geometry; brain extraction is SAHVAI's (`lib/brain.js`), since FSL cannot run in a browser (for a skull-stripped scan, its own non-zero voxels). One quirk is kept on purpose: `predict.py`'s `nii2ants()` passes the NIfTI qform (RAS numbers) to ANTs, which reads them as LPS, so the brain reaches the registration turned 180° about the vertical axis, and ANTs, starting from the centres of mass with no rotation, keeps it so. The network was trained on inputs made this way, and it predicts well only on them. Registration here: centres of mass (as ANTs' initialiser), then a mutual-information refinement (64 bins, rotations within ±0.1 rad, shrink 4 and 2), optional.
+
+Validation (MISTIE demo = JHU case 01; references run with `ants.registration` exactly as `predict.py`, with a given brain mask since FSL is not installable here):
+
+| check | result |
+|---|---|
+| ONNX vs a TensorFlow reference from the same checkpoint (128³ test volume) | max probability difference 4e-5; 0 voxels differ |
+| resampling with ANTs' own transform vs ANTs' `warpedmovout` | correlation 0.99994; inverse mapping vs `apply_transforms` Dice 1.000 |
+| browser registration vs ANTs, same brain mask, native-space Dice | JHU-01 0.93 (15.2 vs 15.1 mL); BLAST scan_0 0.94; BHSD SAH_002 0.95 (Python prototype of the same method) |
+| JHU-01, full browser pipeline (SAHVAI brain extraction; mask Dice 0.989 vs the manual brain mask) | 23.9 mL: the additional 8.7 mL is intraventricular blood higher in the lateral ventricle, beside the drain, that the reference run did not label |
+| BHSD SAH_002, full browser pipeline, vs expert ICH + IVH | 94.0 vs 98.0 mL, Dice 0.870 |
+
+DeepBleed is sensitive to small changes in its input (brain mask, placement in the template): expect volume differences of several mL between runs of the original and this port on the same scan.
+
 ## RHUH SAH dataset (Cepeda & García-García) — `rhuh.html`
 
 [Zenodo 8228847](https://doi.org/10.5281/zenodo.8228847): non-contrast CT scans of aneurysmal SAH from Río Hortega University Hospital (Valladolid, Spain) with expert manual bleeding masks, NIfTI, CC BY 4.0, distributed as one 649 MB RAR archive. Browsers cannot read RAR, so the user extracts it and drops (or chooses) the CT and mask of one case; the page runs the chosen model and reports any-blood Dice and volumes against the expert mask, with the mask outlined in white. No RHUH data are hosted here.
@@ -119,11 +138,13 @@ Recent desktop Chrome or Edge (tested in Chromium); Firefox and Safari may work 
 
 ## Licence and attribution
 
-See [LICENSE.md](LICENSE.md): app code CC BY-NC-SA 4.0 (adapted from radar-web); BrainHemoAI code and weights MIT, used with the permission of Dr Ping Hu and the BrainHemoAI group, to whom we are grateful; CLAIM weights and demo data CC BY-NC 4.0; BLAST-CT Apache-2.0 (Copyright 2020 Imperial College London); RHUH dataset CC BY 4.0 (not redistributed). Please cite:
+See [LICENSE.md](LICENSE.md): app code CC BY-NC-SA 4.0 (adapted from radar-web); BrainHemoAI code and weights MIT, used with the permission of Dr Ping Hu and the BrainHemoAI group, to whom we are grateful; CLAIM weights and demo data CC BY-NC 4.0; BLAST-CT Apache-2.0 (Copyright 2020 Imperial College London); DeepBleed CC BY-NC-ND 4.0 (weights unchanged) and its MISTIE/CLEAR demo CT CC BY-NC 4.0; RHUH dataset CC BY 4.0 (not redistributed). Please cite:
 
 - Hu P, Zhou H, Yan T, et al. Deep learning-assisted identification and quantification of aneurysmal subarachnoid hemorrhage in non-contrast CT scans: development and external validation of Hybrid 2D/3D UNet. *NeuroImage* 2023;279:120321. doi:10.1016/j.neuroimage.2023.120321
 - Kiewitz J, Aydin OU, Hilbert A, Gultom M, Nouri A, Khalil AA, Vajkoczy P, Tanioka S, Ishida F, Dengler NF, Frey D. Deep learning-based multiclass segmentation in aneurysmal subarachnoid hemorrhage. *Front Neurol* 2024;15:1490216. doi:10.3389/fneur.2024.1490216
 - Monteiro M, Newcombe VFJ, Mathieu F, Adatia K, Kamnitsas K, Ferrante E, Das T, Whitehouse D, Rueckert D, Menon DK, Glocker B. Multiclass semantic segmentation and quantification of traumatic brain injury lesions on head CT using deep learning: an algorithm development and multicentre validation study. *Lancet Digit Health* 2020;2(6):e314–e322. doi:10.1016/S2589-7500(20)30085-6
+- Sharrock MF, Mould WA, Ali H, Hildreth M, Awad IA, Hanley DF, Muschelli J. 3D deep neural network segmentation of intracerebral hemorrhage: development and validation for clinical trials. *Neuroinformatics* 2021;19(3):403–415. doi:10.1007/s12021-020-09493-5
+- Hanley D, Mould WA, Ullman N, Muschelli J. Head CT scans associated with "Validated automatic brain extraction of head CT images". Johns Hopkins Research Data Repository; 2019. doi:10.7281/T1/CZDPSX (DeepBleed demo case)
 - Cepeda S, García-García S. Non-contrast CT scans dataset for subarachnoid hemorrhage: bleeding segmentation. Zenodo; 2023. doi:10.5281/zenodo.8228847
 - Wu B, et al. BHSD: a 3D multi-class brain hemorrhage segmentation dataset. MLMI 2023, LNCS 14348. doi:10.1007/978-3-031-45673-2_15 (CLAIM demo cases)
 - Zhang Q, Zhang J, …, Liang T. An expert-level generalist AI for abdominal CT diagnosis. *Science* 2026;393(6817):eaec6129. doi:10.1126/science.aec6129 (RADAR; the browser architecture of this port follows radar-web)

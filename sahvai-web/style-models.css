@@ -133,3 +133,4 @@ body.busy .panel .drop:not(.busy) { opacity: .7; }
 .cite .disc { background: var(--warnbg); border: 1px solid #e7c66b; border-radius: 8px; padding: 6px 10px; color: #5c4200; }
 .gt-swatch { background: #fff; border: 1px solid #555; }
 .phead .num { display: none; }
+.side [hidden], .legend [hidden] { display: none !important; }
