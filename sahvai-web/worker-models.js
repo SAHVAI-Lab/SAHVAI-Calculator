@@ -241,7 +241,10 @@ async function handle(data) {
     return;
   }
   try {
-    let device = await pickDevice(data.device);
+    // DeepBleed always runs on the CPU: its 128^3 3D V-Net returns an empty (all-zero) output on WebGPU in current
+    // ONNX Runtime Web / browser combinations, and is slower there than multi-threaded WebAssembly anyway
+    let device = model === 'deepbleed' ? 'wasm' : await pickDevice(data.device);
+    if (model === 'deepbleed' && data.device !== 'wasm') log('DeepBleed runs on the CPU (WebAssembly): its 3D network is unreliable and slower on WebGPU');
     const names = modelFiles(model, data.opts);
     const ready = getSessions(model, names, device).catch(e => e);
     stage('Reading the scan', 0);

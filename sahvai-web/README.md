@@ -100,6 +100,8 @@ Validation (MISTIE demo = JHU case 01; references run with `ants.registration` e
 | JHU-01, full browser pipeline (SAHVAI brain extraction; mask Dice 0.989 vs the manual brain mask) | 23.9 mL: the additional 8.7 mL is intraventricular blood higher in the lateral ventricle, beside the drain, that the reference run did not label |
 | BHSD SAH_002, full browser pipeline, vs expert ICH + IVH | 94.0 vs 98.0 mL, Dice 0.870 |
 
+DeepBleed runs on the CPU (WebAssembly) whatever the Compute setting: on WebGPU (tested: Chrome, AMD Radeon Pro Vega) its 128³ V-Net returned an all-zero output and took 97 s, against a correct result in 24 s on 8 CPU threads.
+
 DeepBleed is sensitive to small changes in its input (brain mask, placement in the template): expect volume differences of several mL between runs of the original and this port on the same scan.
 
 ## RHUH SAH dataset (Cepeda & García-García) — `rhuh.html`

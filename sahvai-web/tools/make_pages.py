@@ -103,7 +103,7 @@ p5 = panel('deepbleed', 'D', 'DeepBleed <span>MISTIE trial investigators · 3D V
   'Sharrock, Hanley, Muschelli et al. · Johns Hopkins (BIOS)',
   f"""<div class="opts">
       <label title="As DeepBleed (ANTs): after aligning the centres of mass, refine the rigid registration by mutual information"><input class="refine" type="checkbox" checked> Refine the registration (mutual information)</label>
-      <span class="small">90.2 MB model download, cached after the first run.</span>
+      <span class="small">90.2 MB model download, cached after the first run. Runs on the CPU whatever the Compute setting (about 25 s for the network on an 8-thread desktop; WebGPU gives wrong, empty results for this 3D network in current browsers).</span>
     </div>
     <div class="note small-note">Not the same task as SAHVAI or CLAIM: DeepBleed was trained on spontaneous ICH with or without IVH (MISTIE II) and labels <b>ICH and IVH as one class</b>; subarachnoid or subdural blood is not its target. The brain is extracted with SAHVAI's method (DeepBleed uses FSL BET, which cannot run in a browser); tick <i>Brain outline</i> in the viewer to check it.</div>
     {drop('deepbleed', ['Demo: MISTIE/CLEAR ICH case', 'Demo: BHSD ICH + IVH (labels)', 'Demo: BLAST-CT contusions (labels)'], gt=True, hint=' The brain is aligned to DeepBleed’s 1.5 mm, 128³ CT template, segmented there and mapped back to the scan.')}""",
