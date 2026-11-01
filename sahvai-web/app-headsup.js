@@ -22,9 +22,17 @@ function log(msg) {
   $('caps').textContent = [gpu ? 'WebGPU available' : 'no WebGPU',
     crossOriginIsolated ? `CPU: ${Math.min(navigator.hardwareConcurrency || 4, 16)} threads` : 'CPU: 1 thread (open this page in its own tab for more)'].join(' · ');
 })();
-const device = () => document.querySelector('input[name=device]:checked').value;
 // phones and tablets (iPadOS reports itself as a Mac with touch): lighter settings, and the engine is released after each run
 const LITE = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+// On phones and tablets Auto means the CPU: WebGPU ran the model but then crashed iPhone Safari (out of memory, Nov 2026),
+// while the CPU completes the same scan in about 30 s with identical results. WebGPU can still be chosen explicitly.
+const device = () => { const v = document.querySelector('input[name=device]:checked').value; return LITE && v === 'auto' ? 'wasm' : v; };
+if (LITE) {
+  const auto = document.querySelector('input[name=device][value=auto]');
+  if (auto) auto.parentElement.lastChild.textContent = ' Auto (CPU on this device)';
+  const gpu = document.querySelector('input[name=device][value=webgpu]');
+  if (gpu) gpu.parentElement.title = 'WebGPU has crashed iPhone Safari with this model (out of memory); the CPU is the safe choice on phones';
+}
 const ensemble = () => document.querySelector('input[name=hu-ens]:checked').value === '3';
 
 // subtypes: label value in the localisation map, colour
@@ -84,7 +92,7 @@ const viewer = new HUViewer(q('.viewerhost'), VCLASSES);
 let worker = null, busy = false, jobId = 0, cur = { name: '', frac: 0 }, started = 0, lastInput = null, R = null;
 function startWorker() {
   if (worker) return;
-  worker = new Worker(new URL('./worker-models.js?v=h2', import.meta.url), { type: 'module' });
+  worker = new Worker(new URL('./worker-models.js?v=h3', import.meta.url), { type: 'module' });
   worker.onmessage = ({ data }) => {
     if (data.type === 'log') { log(data.msg); return; }
     if (data.type === 'ready') { if (!busy) setStage(data.failed ? 'Ready. The model downloads when you run a scan.' : 'Model ready. Drop a scan or try a demo case.', data.failed ? 0 : 1); return; }
