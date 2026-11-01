@@ -96,3 +96,7 @@ footer p { margin: 4px 0; }
 /* embedded as a tab of the SAHVAI Calculator: the tab has its own banner */
 .embedded .top { display: none; }
 .embedded main { padding-top: 12px; }
+/* a scan sent from the HEADS-UP detector */
+.note.handoff { margin: 0 0 12px; border: 1px solid var(--mayo-blue); background: var(--mayo-light); border-radius: 12px; padding: 10px 14px; font-size: .86rem; }
+.note.handoff h2 { margin: 0 0 4px; }
+.note.handoff p { margin: 0; }

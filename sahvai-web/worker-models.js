@@ -16,6 +16,7 @@ import { detectStripped, airBackground, brainMaskFor } from './lib/stripped.js';
 import { extractBrain } from './lib/brain.js';
 import { loadTemplate, runDeepBleed } from './lib/deepbleed.js';
 import { loadSwinTemplate, runSahSwin, inTemplateSpace } from './lib/sahswin.js';
+import { runHeadsUp, HEADSUP_GRID } from './lib/headsup.js';
 
 const base = new URL('./', import.meta.url).href;
 ort.env.wasm.wasmPaths = base + 'vendor/ort/';
@@ -24,7 +25,7 @@ ort.env.logLevel = 'error';
 
 // Model files. Bump a version when its ONNX files change so the browser cache is refreshed.
 // chunks: the file is stored as name.onnx.0, name.onnx.1, ... (GitHub Pages limits file size) and joined here.
-const BLAST_SIZE = 2142772, SWIN_SIZE = 276715476;
+const BLAST_SIZE = 2142772, SWIN_SIZE = 276715476, HU_SIZE = { dn121: 14269355, dn169: 25583481, sx101: 93837262 };
 export const MODELS = {
   sahvai: { label: 'SAHVAI (BrainHemoAI Hybrid 2D/3D UNet)', version: 'v2', dir: 'models/',
     files: Object.fromEntries(Object.entries({ p1: 33368, p2: 57861, p3: 374005, p4: 223749, p5: 3285, pm: 25650461, p6: 107413, p7: 57861, p8: 1023 }).map(([k, s]) => [k, { size: s }])) },
@@ -33,8 +34,10 @@ export const MODELS = {
   claim: { label: 'CLAIM nnU-Net 2D', version: 'c1', dir: 'models/claim/', files: { claim2d: { size: 92701875, chunks: 2 } } },
   deepbleed: { label: 'DeepBleed V-Net', version: 'd2', dir: 'models/deepbleed/', files: { deepbleed: { size: 90242129, chunks: 2 } } },
   sahswin: { label: 'SAH Swin UNETR (Valladolid)', version: 's1', dir: 'models/sahswin/', files: { sahswin: { size: SWIN_SIZE, chunks: 3 } } },
+  headsup: { label: 'HEADS-UP detector (RSNA 2019 1st-place CNNs)', version: 'h1', dir: 'models/headsup/',
+    files: { headsup_dn121: { size: HU_SIZE.dn121 }, headsup_dn169: { size: HU_SIZE.dn169 }, headsup_sx101: { size: HU_SIZE.sx101, chunks: 2 } } },
 };
-const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6], deepbleed: [1], sahswin: [1] };
+const BLOOD = { sahvai: [1, 2, 3], blast: [1, 2, 4], claim: [1, 2, 4, 6], deepbleed: [1], sahswin: [1], headsup: [1, 2, 3, 4, 5] };
 // DeepBleed segments ICH + IVH: the reference classes it is compared with, per label scheme
 const REF_ICH = { blast: [1, 4], claim: [2, 4], sahvai: [2, 3] };
 
@@ -139,6 +142,7 @@ async function readVolume(data) {
       const pick = await pickSeries(inp.entries, log);
       info = { source: 'DICOM', series_description: pick.best.desc || '', body_part: pick.best.body_part || '', series_selection: pick.why, series_in_upload: pick.list };
       vol = await seriesVolume(pick.best.files, log);
+      if (vol.window) info.dicom_window = vol.window;
     }
   }
   return { vol, info };
@@ -185,7 +189,7 @@ function compare(model, labels, gt, scheme, sp) {
 
 async function runModel(model, g, S, dev, data) {
   const o = data.opts || {}, call = caller(S);
-  const st = (s, f) => stage(`${s}${s.startsWith('Segmenting') ? ` · ${dev === 'webgpu' ? 'WebGPU' : 'CPU'}` : ''}`, f);
+  const st = (s, f) => stage(`${s}${/^(Segmenting|Classifying)/.test(s) ? ` · ${dev === 'webgpu' ? 'WebGPU' : 'CPU'}` : ''}`, f);
   if (model === 'sahvai') return analyse(g, { call, log, angle: o.angle ?? null, mask: data._stripped ? await brainMaskFor(data._vol) : null, slab: dev === 'webgpu' ? 6 : 4, stage: st });
   if (model === 'blast') return runBlast(g, { call, models: Object.keys(S), log, stage: st });
   if (model === 'claim') {
@@ -205,6 +209,7 @@ async function runModel(model, g, S, dev, data) {
     const r = await runDeepBleed(g, brain, tpl, { call, refine: o.refine !== false, log, stage: st });
     return { ...r, mask: brain };
   }
+  if (model === 'headsup') return runHeadsUp(g, { call, models: Object.keys(S), window: data._vol.window || null, log, stage: st, batch: dev === 'webgpu' ? 4 : 2 });
   if (model === 'sahswin') {
     let brain;
     if (data._stripped) brain = await brainMaskFor(data._vol, SW_GRID);
@@ -240,9 +245,10 @@ function mapMask(m, a, b) {   // nearest-neighbour transfer of a mask between tw
   return out;
 }
 
-const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID, deepbleed: DB_GRID, sahswin: SW_GRID };
+const GRID = { sahvai: {}, blast: BLAST_GRID, claim: CLAIM_GRID, deepbleed: DB_GRID, sahswin: SW_GRID, headsup: HEADSUP_GRID };
 function modelFiles(model, opts = {}) {
   if (model === 'blast') return Object.keys(MODELS.blast.files).slice(0, opts.ensemble ? 12 : 1);
+  if (model === 'headsup') return opts.ensemble ? Object.keys(MODELS.headsup.files) : ['headsup_dn121'];
   return Object.keys(MODELS[model].files);
 }
 
@@ -309,7 +315,8 @@ async function handle(data) {
     if (gt) transfer.push(gt.labels.buffer);
     self.postMessage({ type: 'result', id: cur.id, model, grid, labels: res.labels, mask: res.mask || null, gt: gt ? gt.labels : null, gtName: gt ? gt.name : null,
       comparison, volumes: res.volumes, angle: res.angle, slices: res.slices, windows: res.windows, mode: res.mode, mirror: res.mirror, nModels: model === 'blast' ? names.length : undefined,
-      tiles: res.tiles, passes: res.passes, transform: res.transform, template_mL: res.template_mL, warnings, info, device, seconds }, transfer);
+      tiles: res.tiles, passes: res.passes, transform: res.transform, template_mL: res.template_mL, warnings, info, device, seconds,
+      headsup: model === 'headsup' ? { probs: res.probs, perModel: res.perModel, cam: res.cam, camDims: res.camDims, crop: res.crop, summary: res.summary, window: res.window, models: names } : undefined }, transfer);
   } catch (e) {
     console.error(e);
     post('error', { msg: e && e.message ? e.message : String(e) });

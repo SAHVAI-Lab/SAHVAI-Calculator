@@ -134,3 +134,33 @@ body.busy .panel .drop:not(.busy) { opacity: .7; }
 .gt-swatch { background: #fff; border: 1px solid #555; }
 .phead .num { display: none; }
 .side [hidden], .legend [hidden] { display: none !important; }
+
+/* HEADS-UP detector page */
+.hu .demos { margin-top: 10px; }
+.verdict { border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; color: #fff; background: linear-gradient(135deg, #2d6a3e, #3f8f55); }
+.verdict.pos { background: linear-gradient(135deg, #8a1230, #c2185b); }
+.verdict.maybe { background: linear-gradient(135deg, #8a5a00, #c98a00); }
+.verdict .vt { font-size: 1.35rem; font-weight: 800; letter-spacing: .2px; }
+.verdict .vs { font-size: .88rem; opacity: .95; }
+.vols.subtypes { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 800px) { .vols.subtypes { grid-template-columns: 1fr 1fr; } }
+.vol.sub { cursor: pointer; }
+.vol.sub.not-detected { opacity: .62; }
+.vol.sub.not-detected .v { color: var(--muted); }
+.vol.sub.detected { box-shadow: 0 0 0 2px var(--c) inset; }
+.vol.sub.possible { box-shadow: 0 0 0 2px var(--c) inset; border-style: dashed; }
+.next { margin-top: 12px; background: #f6f9ff; border: 1px solid #c9d6ee; border-radius: 12px; padding: 10px 14px; }
+.next h3 { margin: 0 0 2px; font-size: .95rem; color: var(--mayo-dark); }
+.next p { margin: 0 0 8px; }
+.targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.target { text-align: left; font: inherit; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
+.target b { color: var(--mayo-blue); font-size: .92rem; }
+.target span { font-size: .78rem; color: var(--muted); }
+.target em { font-style: normal; font-size: .76rem; font-weight: 700; color: var(--mayo-dark); }
+.target.rec { border-color: var(--mayo-blue); }
+.target.first { background: var(--mayo-blue); }
+.target.first b, .target.first span, .target.first em { color: #fff; }
+.target:hover { box-shadow: 0 1px 6px rgba(0,61,165,.25); }
+.note.handoff { margin: 0 0 12px; border-color: var(--mayo-blue); background: var(--mayo-light); }
+.hu .canvaswrap { min-height: 240px; }
+@media (max-width: 600px) { .hu .notice .note:nth-child(3) { display: none; } .verdict .vt { font-size: 1.1rem; } }

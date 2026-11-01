@@ -145,6 +145,7 @@ export async function seriesVolume(files, log = () => {}) {
   return {
     dims: [h0.cols, h0.rows, n], spacing, dir: [rowDir, colDir, normal],
     origin: havePos ? nums(hs[0].h.ipp) : null,
+    window: h0.wc && h0.ww ? [nums(h0.wc)[0], nums(h0.ww)[0]] : null,
     slice: k => decodeSlice(hs[k].m, hs[k].h),
   };
 }

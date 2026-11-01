@@ -1,5 +1,6 @@
 import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
+import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
 
 const $ = id => document.getElementById(id);
 const logEl = $('log'), t0 = performance.now();
@@ -187,3 +188,11 @@ if (window.parent !== window) {
   const report = () => window.parent.postMessage({ type: 'sahvai-web-height', height: document.documentElement.scrollHeight }, location.origin);
   new ResizeObserver(report).observe(document.body); report();
 }
+
+// a scan sent from the HEADS-UP detector (?handoff=<id>): show what HEADS-UP found and run it here
+receivedHandoff().then(async h => {
+  if (!h) return;
+  $('drop').before(handoffBanner(h, 'SAHVAI (BrainHemoAI)'));
+  log(`hand-off from HEADS-UP: ${h.label || ''}`);
+  try { run(await handoffFiles(h)); } catch (e) { setStage(`Could not open the scan from HEADS-UP: ${e.message}`, 0); }
+});

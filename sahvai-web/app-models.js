@@ -3,6 +3,7 @@
 import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
 import { Viewer, save } from './lib/viewer.js';
+import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
 
 const $ = id => document.getElementById(id);
 const logEl = $('log'), t0 = performance.now();
@@ -316,3 +317,13 @@ if (pre) {
 if (panels.claim) panels.claim.setStage('The CLAIM model (92.7 MB) downloads on the first run and is then cached by the browser.', 0);
 if (panels.deepbleed) panels.deepbleed.setStage('The DeepBleed model (90.2 MB) downloads on the first run and is then cached by the browser.', 0);
 if (panels.sahswin) panels.sahswin.setStage('The SAH Swin UNETR model (277 MB) downloads on the first run and is then cached by the browser.', 0);
+
+// a scan sent from the HEADS-UP detector (?handoff=<id>): show what HEADS-UP found and run it here
+receivedHandoff().then(async h => {
+  if (!h) return;
+  const p = Object.values(panels).find(x => !(x instanceof DatasetPanel));
+  if (!p) return;
+  p.root.querySelector('.drop').before(handoffBanner(h, p.title));
+  log(`hand-off from HEADS-UP: ${h.label || ''}`);
+  try { p.runFiles(await handoffFiles(h)); } catch (e) { p.setStage(`Could not open the scan from HEADS-UP: ${e.message}`, 0); }
+});

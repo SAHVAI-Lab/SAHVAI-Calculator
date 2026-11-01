@@ -156,6 +156,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <button class="tab-btn" onclick="showTab('citations')">Publications</button>
   <button class="tab-btn" onclick="showTab('esah')">eSAH Score</button>
   <button class="tab-btn" onclick="showTab('ivh')">IVH (mod. Graeb)</button>
+  <button class="tab-btn" onclick="showTab('headsup')">HEADS-UP Detector (AI)</button>
   <button class="tab-btn" onclick="showTab('web')">SAHVAI Web (BrainHemoAI)</button>
   <button class="tab-btn" onclick="showTab('web3d')">SAHVAI 3D-4D</button>
   <button class="tab-btn" onclick="showTab('claim')">CLAIM aSAH (AI)</button>
@@ -509,6 +510,22 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 </div>
 
 <!-- ==================== SAHVAI-MM (MULTIMODAL) TAB ==================== -->
+<!-- ==================== HEADS-UP DETECTOR (AI) TAB ==================== -->
+<div id="tab-headsup" class="tab-content">
+
+<div class="card" style="background:linear-gradient(135deg,var(--mayo-dark),var(--mayo-blue));color:#fff;text-align:center;padding:1.5rem;">
+  <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;">HEADS-UP &mdash; intracranial hemorrhage detector, step 1 of the suite</h3>
+  <p style="font-size:0.85rem;opacity:0.9;max-width:820px;margin:0 auto 0.75rem;">Hemorrhage Evaluation and Detector System for Underserved Populations (Salman et al., <i>Mayo Clin Proc Digit Health</i> 2023). Drop a non-contrast head CT to detect hemorrhage and classify epidural, intraparenchymal, intraventricular, subarachnoid and subdural blood slice by slice, with the RSNA 2019 1st-place networks. It then sends the scan to the segmentation tab that suits the type found. Runs locally, including on a phone browser &mdash; images are never uploaded.</p>
+  <a href="sahvai-web/headsup.html" target="_blank" rel="noopener" style="display:inline-block;background:#fff;color:var(--mayo-blue);font-weight:700;font-size:0.85rem;padding:0.45rem 1.1rem;border-radius:8px;text-decoration:none;">Open full screen &#8599;</a>
+  <p style="font-size:0.72rem;opacity:0.8;margin-top:0.6rem;">Research use only &mdash; not a medical device and not a triage system.</p>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <iframe id="headsupFrame" data-src="sahvai-web/headsup.html" title="HEADS-UP detector in the browser" style="width:100%;height:1600px;border:0;display:block;" loading="lazy"></iframe>
+</div>
+
+</div>
+
 <!-- ==================== SAHVAI WEB (AI) TAB ==================== -->
 <div id="tab-web" class="tab-content">
 
@@ -1080,7 +1097,9 @@ function showTab(name) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  event.target.classList.add('active');
+  const ev = typeof event !== 'undefined' ? event : null;
+  const btn = ev && ev.target && ev.target.classList && ev.target.classList.contains('tab-btn') ? ev.target : document.querySelector(`.tab-btn[onclick="showTab('${name}')"]`);
+  if (btn) btn.classList.add('active');
   if(name === 'mm') { syncMMFromTabs(); calcMM(); }
   // the SAHVAI Web tool tabs load their page the first time they are opened
   const f = document.querySelector('#tab-' + name + ' iframe[data-src]'); if (f && !f.getAttribute('src')) f.src = f.dataset.src;
@@ -1089,6 +1108,15 @@ function showTab(name) {
 window.addEventListener('message', e => {
   if (e.origin !== location.origin || !e.data || e.data.type !== 'sahvai-web-height') return;
   for (const f of document.querySelectorAll('iframe[data-src]')) if (f.contentWindow === e.source) f.style.height = Math.max(600, e.data.height + 20) + 'px';
+});
+// HEADS-UP hands a scan to a segmentation tab: switch to it and (re)load its page with the hand-off id
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin || !e.data || e.data.type !== 'sahvai-open-tab') return;
+  const tab = String(e.data.tab || ''), f = document.querySelector('#tab-' + tab + ' iframe[data-src]');
+  if (!f) return;
+  showTab(tab);
+  f.src = f.dataset.src + (f.dataset.src.includes('?') ? '&' : '?') + 'handoff=' + encodeURIComponent(e.data.handoff || '');
+  document.getElementById('tab-' + tab).scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 // ===== LIGHTBOX =====

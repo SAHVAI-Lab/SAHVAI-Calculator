@@ -27,6 +27,7 @@ export const SLICE_TAGS = {
   0x00280002: 'samples', 0x00280008: 'frames', 0x00280010: 'rows', 0x00280011: 'cols',
   0x00280030: 'spacing', 0x00280100: 'bits', 0x00280101: 'bits_stored', 0x00280103: 'pixel_rep',
   0x00281052: 'intercept', 0x00281053: 'slope',
+  0x00281050: 'wc', 0x00281051: 'ww',   // window centre / width (HEADS-UP uses the series' brain window)
 };
 const PIXEL = 0x7FE00010;
 
