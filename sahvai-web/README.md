@@ -6,7 +6,7 @@ Eight pages, each its own tab in the SAHVAI Calculator, all running entirely in 
 
 | page | model / data | from | classes | licence |
 |---|---|---|---|---|
-| HEADS-UP detector (`headsup.html`) | 2D CNNs of the RSNA 2019 1st-place solution (Wang et al., *NeuroImage Clin* 2021): DenseNet121, or an ensemble with DenseNet169 and SE-ResNeXt101 | Mayo Clinic HEADS-UP (Salman et al., *Mayo Clin Proc Digit Health* 2023); weights by Tao Shen and colleagues | detection of any ICH and EDH, IPH, IVH, SAH, SDH per slice; hand-off to the segmentation pages | no licence file (non-commercial, permission sought); RSNA data non-commercial |
+| HEADS-UP detector (`headsup.html`) | 2D CNNs of the RSNA 2019 1st-place solution (Wang et al., *NeuroImage Clin* 2021): DenseNet121, or an ensemble with DenseNet169 and SE-ResNeXt101 | Mayo Clinic HEADS-UP (Salman et al., *Mayo Clin Proc Digit Health* 2023); weights by Tao Shen and colleagues | detection of any ICH and EDH, IPH, IVH, SAH, SDH per slice; hand-off to the segmentation pages | non-commercial, with Tao Shen's written permission; RSNA data non-commercial |
 | SAHVAI (`index.html`) | Hybrid 2D/3D UNet, BrainHemoAI weights (Hu et al., *NeuroImage* 2023) | BrainHemoAI | SAH, IPH, IVH | MIT (with permission) |
 | CLAIM aSAH (`claim.html`) | nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., *Front Neurol* 2024) | CLAIM, Charité Berlin | SAH, IVH, ventricles, ICH, aneurysm, SDH | CC BY-NC 4.0 |
 | BLAST-CT (`blast.html`) | DeepMedic, 1 or 12 models (Monteiro et al., *Lancet Digit Health* 2020) | Cambridge / Imperial College London | IPH, extra-axial haemorrhage, oedema, IVH (traumatic brain injury) | Apache-2.0 |
