@@ -209,7 +209,7 @@ async function runModel(model, g, S, dev, data) {
     const r = await runDeepBleed(g, brain, tpl, { call, refine: o.refine !== false, log, stage: st });
     return { ...r, mask: brain };
   }
-  if (model === 'headsup') return runHeadsUp(g, { call, models: Object.keys(S), window: data._vol.window || null, log, stage: st, batch: dev === 'webgpu' ? 4 : 2 });
+  if (model === 'headsup') return runHeadsUp(g, { call, models: Object.keys(S), window: data._vol.window || null, log, stage: st, batch: lite ? 1 : dev === 'webgpu' ? 4 : 2 });
   if (model === 'sahswin') {
     let brain;
     if (data._stripped) brain = await brainMaskFor(data._vol, SW_GRID);
@@ -255,7 +255,12 @@ function modelFiles(model, opts = {}) {
 // jobs run one after another (a run that arrives during a preload waits for it)
 let chain = Promise.resolve();
 self.onmessage = ({ data }) => { chain = chain.then(() => handle(data)); };
+// Phones and tablets (flag 'lite' from the page): one CPU thread and one slice per network pass. iOS Safari gives a tab
+// far less memory than a desktop browser, and ONNX Runtime's memory only grows; the page also ends this worker after
+// each run there, which frees it.
+let lite = false;
 async function handle(data) {
+  if (data.lite && !lite) { lite = true; ort.env.wasm.numThreads = 1; log('phone/tablet mode: 1 CPU thread, one slice per pass, engine released after each run'); }
   const t0 = performance.now();
   cur = { id: data.id || 0, model: data.model };
   const model = data.model;

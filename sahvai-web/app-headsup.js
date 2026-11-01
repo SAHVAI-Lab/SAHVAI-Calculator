@@ -23,6 +23,8 @@ function log(msg) {
     crossOriginIsolated ? `CPU: ${Math.min(navigator.hardwareConcurrency || 4, 16)} threads` : 'CPU: 1 thread (open this page in its own tab for more)'].join(' · ');
 })();
 const device = () => document.querySelector('input[name=device]:checked').value;
+// phones and tablets (iPadOS reports itself as a Mac with touch): lighter settings, and the engine is released after each run
+const LITE = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 const ensemble = () => document.querySelector('input[name=hu-ens]:checked').value === '3';
 
 // subtypes: label value in the localisation map, colour
@@ -82,17 +84,30 @@ const viewer = new HUViewer(q('.viewerhost'), VCLASSES);
 let worker = null, busy = false, jobId = 0, cur = { name: '', frac: 0 }, started = 0, lastInput = null, R = null;
 function startWorker() {
   if (worker) return;
-  worker = new Worker(new URL('./worker-models.js', import.meta.url), { type: 'module' });
+  worker = new Worker(new URL('./worker-models.js?v=h2', import.meta.url), { type: 'module' });
   worker.onmessage = ({ data }) => {
     if (data.type === 'log') { log(data.msg); return; }
     if (data.type === 'ready') { if (!busy) setStage(data.failed ? 'Ready. The model downloads when you run a scan.' : 'Model ready. Drop a scan or try a demo case.', data.failed ? 0 : 1); return; }
     if (data.id !== jobId) return;
     if (data.type === 'progress') setStage(data.stage, data.frac);
-    else if (data.type === 'error') { log(`ERROR: ${data.msg}`); setStage(`Error: ${data.msg}`, 0); finish(); }
-    else if (data.type === 'result') { setStage(`Done in ${data.seconds.toFixed(0)}s`, 1); show(data); finish(); }
+    else if (data.type === 'error') {
+      log(`ERROR: ${data.msg}`);
+      // a failed engine start (e.g. out of memory) is sticky inside a worker: start a fresh one next time
+      stopWorker();
+      setStage(/initWasm|backend|memory|allocation/i.test(data.msg)
+        ? 'The browser could not start the AI engine, usually for lack of memory. Close other tabs and try again; on a phone, the DenseNet121 model and the CPU setting use the least memory.'
+        : `Error: ${data.msg}`, 0);
+      finish();
+    }
+    else if (data.type === 'result') {
+      setStage(`Done in ${data.seconds.toFixed(0)}s`, 1);
+      if (LITE) stopWorker();   // free the engine's memory before the results are drawn
+      show(data); finish();
+    }
   };
-  worker.onerror = e => { log(`worker error: ${e.message}`); setStage(`Error: ${e.message}`, 0); worker = null; finish(); };
+  worker.onerror = e => { log(`worker error: ${e.message}`); setStage(`Error: ${e.message}`, 0); stopWorker(); finish(); };
 }
+function stopWorker() { if (worker) { worker.terminate(); worker = null; } }
 function setStage(name, frac) {
   cur = { name, frac }; q('.status').hidden = false;
   q('.stage-name').textContent = name; q('.bar i').style.width = `${Math.round(frac * 100)}%`; showPct();
@@ -110,7 +125,7 @@ function submit(input, label) {
   busy = true; started = performance.now(); jobId++; lastInput = { ...input, label };
   document.body.classList.add('busy'); q('.drop').classList.add('busy'); q('.results').hidden = true; setStage('Starting', 0);
   log(`---- HEADS-UP: ${label}`);
-  worker.postMessage({ job: 'run', id: jobId, model: 'headsup', device: device(), opts: { ensemble: ensemble() }, ...input });
+  worker.postMessage({ job: 'run', id: jobId, model: 'headsup', device: device(), lite: LITE, opts: { ensemble: ensemble() }, ...input });
 }
 const runFiles = files => {
   files = [...files]; if (!files.length) return;
@@ -235,10 +250,12 @@ if (window.parent !== window) {
   new ResizeObserver(rep).observe(document.body); rep();
 }
 
-// warm up the phone model (14 MB)
-startWorker();
-setStage('Loading the model', 0);
-worker.postMessage({ job: 'preload', model: 'headsup', device: device(), opts: { ensemble: false } });
+// warm up the phone model (14 MB) on computers; on phones it loads at the first run, so no memory is held while idle
+if (!LITE) {
+  startWorker();
+  setStage('Loading the model', 0);
+  worker.postMessage({ job: 'preload', model: 'headsup', device: device(), opts: { ensemble: false } });
+} else setStage('Ready. The 14 MB model downloads at the first run, then is cached.', 0);
 document.querySelectorAll('input[name=hu-ens]').forEach(el => el.addEventListener('change', () => {
   if (!busy && ensemble()) setStage('The ensemble (134 MB) downloads on the next run and is then cached.', 0);
 }));
