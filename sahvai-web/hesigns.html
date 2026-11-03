@@ -50,6 +50,12 @@
       <label><input type="radio" name="align" value="manual"> Set</label>
       <input id="angle" class="angle" type="number" min="-45" max="45" step="1" value="0" disabled aria-label="Rotation in degrees"> °
     </div>
+    <div class="group" aria-label="Yale expansion model">
+      <span class="lbl">Yale HE model</span>
+      <label title="Tran et al., npj Digit Med 2024: SegResNet + 3D DenseNet121, predicts expansion of 6 mL or more"><input id="yale" type="checkbox" checked> run</label>
+      <select id="yaleMask" aria-label="Hematoma mask for the Yale classifier"><option value="seg">its own SegResNet mask (as published)</option><option value="sahvai">SAHVAI IPH mask (faster)</option></select>
+      <label>MC passes <input id="yalePasses" class="angle" type="number" min="0" max="30" step="1" value="10"></label>
+    </div>
     <div class="group" role="radiogroup" aria-label="Hematoma definition">
       <span class="lbl">Hematoma</span>
       <label title="The largest connected intraparenchymal (IPH) component, as in the published sign definitions"><input type="radio" name="hem" value="iph" checked> IPH only</label>
@@ -99,6 +105,15 @@
       <div class="signs"></div>
       <h3 class="sect">Scores</h3>
       <div class="scores"></div>
+      <h3 class="sect">Expansion prediction model <small>Yale (Tran et al., <i>npj Digit Med</i> 2024) · runs after the signs</small></h3>
+      <div class="yale"></div>
+      <h3 class="sect">Expansion on a follow-up CT <small>conventional HE and revised HE (rHE, with IVH growth)</small></h3>
+      <div class="fu">
+        <p class="small">Drop the follow-up CT of the same patient (or type the volumes) to classify expansion. <b>Conventional HE</b>: ICH growth &gt; 6 mL or &gt; 33% (Dowlatshahi et al., <i>Neurology</i> 2011). <b>Revised HE (rHE)</b>: ICH growth ≥ 6 mL or ≥ 33%, <i>or</i> IVH growth ≥ 1 mL, <i>or</i> new IVH (Yogendrakumar et al., <i>Stroke</i> 2020;51:1120–1127; used by Ning, Yu et al., <i>Sci Rep</i> 2025). Usual follow-up: 24 h (up to 72 h).</p>
+        <div class="fudrop drop" tabindex="0"><p class="big"><b>Drop the follow-up CT here</b></p>
+          <div class="buttons"><label class="btn small">Choose file(s)<input class="fu-files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label><label class="btn small">Choose folder<input class="fu-folder" type="file" webkitdirectory></label></div></div>
+        <div class="futable"></div>
+      </div>
       <h3 class="sect">DeepMedX end-to-end pipeline <small>Yu et al., <i>npj Digit Med</i> 2026</small></h3>
       <div class="dmx"></div>
       <div class="details"></div>
@@ -108,6 +123,8 @@
       <p><b>Segmentation.</b> SAHVAI Web (BrainHemoAI Hybrid 2D/3D UNet; Hu P, et al. <i>NeuroImage</i> 2023;279:120321, <a href="https://doi.org/10.1016/j.neuroimage.2023.120321">doi:10.1016/j.neuroimage.2023.120321</a>), labels SAH, IPH and IVH on a 0.5 × 0.5 mm, 5 mm grid. The hematoma is the largest 26-connected IPH component (optionally with IVH).</p>
       <p><b>Sign definitions.</b> Morotti A, Boulouis G, Dowlatshahi D, et al. Standards for detecting, interpreting, and reporting noncontrast computed tomographic markers of intracerebral hemorrhage expansion. <i>Ann Neurol</i> 2019;86:480–492, and the original reports cited on each card. Review: Liu S, Fu W, Tang X, Fan Y. CT-based prediction of hematoma expansion and adverse outcomes after intracerebral hemorrhage. <i>GeroScience</i> 2026, <a href="https://doi.org/10.1007/s11357-026-02478-3">doi:10.1007/s11357-026-02478-3</a>.</p>
       <p><b>Scores.</b> BAT: Morotti A, et al. <i>Stroke</i> 2018;49:1163–1169. BRAIN: Wang X, et al. <i>Stroke</i> 2015;46:376–381. Spot sign score: Delgado Almandoz JE, et al. <i>Stroke</i> 2009;40:2994–3000.</p>
+      <p><b>Yale expansion model.</b> Tran AT, Zeevi T, Haider SP, et al., Payabvash S. Uncertainty-aware deep-learning model for prediction of supratentorial hematoma expansion from admission non-contrast head computed tomography scan. <i>npj Digit Med</i> 2024;7:26, <a href="https://doi.org/10.1038/s41746-024-01007-w">doi:10.1038/s41746-024-01007-w</a>; code and weights <a href="https://github.com/anhtrnyaleedu/HE">github.com/anhtrnyaleedu/HE</a> (ATACH-2 + Yale, n = 634; HE ≥ 6 mL AUC 0.81 in high-confidence test cases). Converted to ONNX without weight changes; preprocessing re-implemented from <code>model512v9.ipynb</code>. See also Tran et al., <i>AJNR</i> 2025;46:1404–1411 (robustness).</p>
+      <p><b>Expansion definitions.</b> Dowlatshahi D, et al. <i>Neurology</i> 2011;76:1238–1244 (conventional); Yogendrakumar V, et al. Redefining hematoma expansion with the inclusion of intraventricular hemorrhage growth. <i>Stroke</i> 2020;51:1120–1127 (revised); Ning Y, Yu Q, et al. <i>Sci Rep</i> 2025;15:32021.</p>
       <p><b>DeepMedX pipeline.</b> Yu Q, Fan X, Li J, et al. An end-to-end deep learning pipeline for hematoma expansion prediction in spontaneous intracerebral hemorrhage based on non-contrast computed tomography. <i>npj Digit Med</i> 2026;9:39, <a href="https://doi.org/10.1038/s41746-025-02213-w">doi:10.1038/s41746-025-02213-w</a>; code <a href="https://github.com/DeepMedX/sICH_HE">github.com/DeepMedX/sICH_HE</a> (non-commercial research licence). Their region-of-interest step (<code>crop2DROI.ipynb</code>) is re-implemented here in JavaScript; their U-Mamba, Diffusion-UKAN and ViT weights are not public, so their classifier does not run here.</p>
       <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use. The detectors have been checked on synthetic phantoms and inspected on a few public cases, not validated against expert sign reads. Do not use for diagnosis, prognosis or treatment decisions.</p>
     </div>
@@ -128,6 +145,7 @@
       <li><b>Shape signs.</b> Lobules: what an opening with a disk (radius 0.35 × the section's equivalent radius, 2–8 mm) removes from the section; bubble- or sprout-like ones are ≤ 80 mm² with a neck narrower than themselves. Separate small hematomas: other blood labels or compact (elongation ≤ 3) foci of 50–100 HU, ≥ 2 mm², ≥ 4 mm inside the brain, away from metal and calcification. Satellite: a separate focus &lt; 10 mm across, 1–20 mm from the clot. Island: ≥ 3 separate, or ≥ 4 separate plus connected, on one section. Irregular shape: ≥ 2 lobules or separate foci within 10 mm on the largest section.</li>
       <li><b>Contrast.</b> A scan with ≥ 2 mL of 130–600 HU voxels inside the brain is treated as contrast-enhanced: NCCT signs are not read, and foci ≥ 120 HU, ≥ 1.5 mm, inside the clot and not touching its edge are spot-sign candidates. Thin CTA slices are averaged into 5 mm slabs, which lowers small spots' HU.</li>
     </ol>
+    <p class="small"><b>Yale model.</b> Their pipeline as published: brain window 0–80 HU, skull stripped, padded or cropped to 512 × 512 × 48 (slices resampled to 5 mm when there are more than 48), SegResNet by 256 × 256 × 32 sliding window; then mask and CT resampled to 1 mm, the slices with blood ± 16 mm, the CT within 40 mm of the clot as a second channel, resized and centre-cropped to 128 × 128 × 96, 3D DenseNet121 with Monte-Carlo dropout. Checked against the authors' code in Python: same probability (0.175 vs 0.174) and mask volume (80.0 mL) on the BHSD demo.</p>
     <p class="small">Self-test: <code>node tools/hesigns_selftest.mjs</code> injects each sign into a synthetic hematoma and checks it is found (and that a plain hematoma has none). On public demo cases the outputs were inspected by eye; no expert-read sign data set was available.</p>
   </section>
 

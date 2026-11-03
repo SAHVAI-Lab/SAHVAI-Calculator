@@ -3,11 +3,11 @@ import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
 import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
 import { Viewer, save } from './lib/viewer.js';
-import { analyseSigns, deepmedxROI, batScore, brainScore, OVERLAY, SIGN_INFO, CRITERIA } from './lib/hesigns.js';
+import { analyseSigns, deepmedxROI, batScore, brainScore, expansion, NEW_IVH_mL, OVERLAY, SIGN_INFO, CRITERIA } from './lib/hesigns.js';
 
 const $ = id => document.getElementById(id), q = s => document.querySelector(s);
 const logEl = $('log'), t0 = performance.now();
-let worker = null, busy = false, runStart = 0, cur = { frac: 0 }, R = null, lastLabel = '';
+let worker = null, busy = false, runStart = 0, cur = { frac: 0 }, R = null, lastLabel = '', role = 'baseline', FU = null, yaleWorker = null, yaleId = 0;
 const override = {};
 const DEMOS = [
   { url: 'demo/claim/SAH_002_0000.nii.gz', name: 'BHSD case SAH_002 (ICH + IVH + SAH)' },
@@ -46,12 +46,15 @@ setInterval(() => { if (busy) showPct(); }, 1000);
 
 function begin(label) {
   busy = true; runStart = performance.now(); lastLabel = label;
-  q('.drop').classList.add('busy'); q('.status').hidden = false; q('.results').hidden = true;
+  q('.drop').classList.add('busy'); q('.status').hidden = false; if (role !== 'followup') q('.results').hidden = true;
   log('---- ' + label); setStage('Starting', 0); startWorker();
 }
 function done() { busy = false; q('.drop').classList.remove('busy'); }
-function run(files, label) {
+function run(files, label, asRole = 'baseline') {
   files = [...files]; if (!files.length || busy) return;
+  if (asRole === 'followup' && !R) { setStage('Load the baseline CT first, then the follow-up.', 0); return; }
+  role = asRole;
+  if (asRole === 'followup') q('.fudrop').classList.add('busy');
   begin(label || `${files.length} file(s): ${files.slice(0, 3).map(f => f.webkitRelativePath || f.name).join(', ')}${files.length > 3 ? ', …' : ''}`);
   worker.postMessage({ files, device: device(), angle: angle(), wantRaw: true });
 }
@@ -67,7 +70,12 @@ function onMessage({ data }) {
   if (data.type === 'log') log(data.msg);
   else if (data.type === 'ready') { if (!busy) setStage('Model ready. Drop a scan or try a demo case.', 1); }
   else if (data.type === 'progress') setStage(data.stage, data.frac);
-  else if (data.type === 'error') { log(`ERROR: ${data.msg}`); setStage(`Error: ${data.msg}`, 0); done(); }
+  else if (data.type === 'error') { log(`ERROR: ${data.msg}`); setStage(`Error: ${data.msg}`, 0); role = 'baseline'; q('.fudrop').classList.remove('busy'); done(); }
+  else if (data.type === 'result' && role === 'followup') {
+    try { followup(data); setStage(`Follow-up done in ${((performance.now() - runStart) / 1000).toFixed(0)}s`, 1); }
+    catch (e) { console.error(e); setStage(`Error: ${e.message}`, 0); }
+    role = 'baseline'; q('.fudrop').classList.remove('busy'); done();
+  }
   else if (data.type === 'result') {
     setStage('Reading the expansion signs', 0.99);
     setTimeout(() => {
@@ -88,9 +96,82 @@ function analyse(res) {
   const roi = S.status === 'ok' && !S.contrast.enhanced ? deepmedxROI(g, hemMask) : null;
   log(`signs read in ${((performance.now() - ta) / 1000).toFixed(1)}s: ${Object.entries(S.signs).filter(([, s]) => s.auto).map(([k]) => k).join(', ') || 'none'}`);
   for (const k of Object.keys(override)) delete override[k];
-  R = { res, g, S, roi };
+  R = { res, g, S, roi, yale: null }; FU = null;
   show();
+  runYale();
 }
+
+// ---------- Yale expansion model (worker-yale.js) ----------
+function runYale() {
+  const box = q('.yale');
+  if (!$('yale').checked) { box.innerHTML = '<p class="small">Not run (tick <i>Yale HE model: run</i> above and load the scan again).</p>'; return; }
+  if (R.S.contrast.enhanced) { box.innerHTML = '<p class="small">Not run: the model was trained on non-contrast CT.</p>'; return; }
+  if (!yaleWorker) { yaleWorker = new Worker(new URL('./worker-yale.js', import.meta.url), { type: 'module' }); yaleWorker.onmessage = onYale; }
+  const id = ++yaleId, g = R.g, useSahvai = $('yaleMask').value === 'sahvai';
+  let mask = null; if (useSahvai) { mask = new Uint8Array(R.res.labels.length); for (let i = 0; i < mask.length; i++) mask[i] = R.res.labels[i] === 2 ? 1 : 0; }
+  box.innerHTML = `<div class="scard"><p class="small">Running the Yale model (${useSahvai ? 'SAHVAI hematoma mask' : 'its own SegResNet segmentation'}, ${+$('yalePasses').value || 0} Monte-Carlo passes)…</p><div class="bar"><i class="ybar"></i></div><p class="small ystage"></p></div>`;
+  yaleWorker.postMessage({ job: 'run', id, device: device(), passes: +$('yalePasses').value || 0, mask,
+    grid: { nx: g.nx, ny: g.ny, nz: g.nz, sp: g.sp, hu: Float32Array.from(g.hu) } });
+}
+function onYale({ data }) {
+  if (data.id !== yaleId || !R) return;
+  const box = q('.yale');
+  if (data.type === 'log') log('Yale: ' + data.msg);
+  else if (data.type === 'progress') { const b = box.querySelector('.ybar'), st = box.querySelector('.ystage'); if (b) b.style.width = `${Math.round(data.frac * 100)}%`; if (st) st.textContent = data.stage; }
+  else if (data.type === 'missing') box.innerHTML = `<div class="scard"><p class="small"><b>The Yale model files are not installed on this copy of the site.</b> The weights are public on GitHub but carry no licence, so they are hosted only once the authors agree. Local installs: put <code>yale_seg.onnx</code> and <code>yale_cls.onnx</code> in <code>models/yale/</code> (see <code>tools/yale_export.py</code>).</p></div>`;
+  else if (data.type === 'error') { log('Yale ERROR: ' + data.msg); box.innerHTML = `<div class="scard"><p class="small">Yale model error: ${esc(data.msg)}</p></div>`; }
+  // the 3D networks hold several hundred MB of working memory: free it as soon as the model has answered
+  if (['result', 'error', 'missing'].includes(data.type)) { yaleWorker.terminate(); yaleWorker = null; }
+  if (data.type === 'result') { R.yale = data; log(`Yale model: p(HE ≥ 6 mL) ${data.mc.p.toFixed(3)} (deterministic ${data.det.p.toFixed(3)}), ${data.segSource} ${data.segVolume.toFixed(1)} mL, ${data.seconds.toFixed(0)} s`); renderYale(); }
+}
+function renderYale() {
+  const y = R.yale, box = q('.yale'); if (!y) return;
+  const pct = v => (100 * v).toFixed(0) + '%', mc = y.mc.passes > 0;
+  const ps = y.mc.logits.map(v => 1 / (1 + Math.exp(-v))).sort((a, b) => a - b), lo = ps.length ? ps[Math.floor(0.1 * (ps.length - 1))] : null, hi = ps.length ? ps[Math.ceil(0.9 * (ps.length - 1))] : null;
+  box.innerHTML = `<div class="scores"><div class="scard"><h4>Predicted probability of expansion ≥ 6 mL <small>Yale 3D DenseNet121</small></h4>
+      <p class="big">${pct(mc ? y.mc.p : y.det.p)}</p>
+      <table><tr><td>${mc ? `Monte-Carlo mean (${y.mc.passes} passes)` : 'Deterministic'}</td><td>${(mc ? y.mc.p : y.det.p).toFixed(3)}</td></tr>
+      ${mc ? `<tr><td>Deterministic (dropout off)</td><td>${y.det.p.toFixed(3)}</td></tr><tr><td>Spread of passes (10th–90th pct)</td><td>${lo.toFixed(2)}–${hi.toFixed(2)}</td></tr><tr><td>SD across passes · entropy</td><td>${y.mc.sd.toFixed(3)} · ${y.mc.entropy.toFixed(2)} bits</td></tr>` : ''}
+      <tr><td>Hematoma mask (${esc(y.segSource)})</td><td>${y.segVolume.toFixed(1)} mL</td></tr></table>
+      <p class="small">Trained on ATACH-2 and Yale patients (n = 634; supratentorial ICH within 4.5 h). In its test cohort, after excluding the most uncertain 5% of predictions, AUC 0.81, sensitivity 0.62 and specificity 0.81 for expansion ≥ 6 mL. No decision threshold was published; treat the probability as a research score. A wide spread or high entropy means low confidence.</p></div>
+    <div class="scard"><h4>About this run</h4><p class="small">${y.device === 'webgpu' ? 'WebGPU' : 'CPU'}, ${y.seconds.toFixed(0)} s. The model sees the brain window (0–80 HU) skull-stripped and padded to 512 × 512 × 48, its hematoma mask resampled to 1 mm, the slices with blood ± 16 mm, and the CT within 40 mm of the clot. ${y.segSource === 'SAHVAI IPH' ? 'The SAHVAI IPH mask replaced the Yale SegResNet: faster, but not the published pipeline.' : 'Its SegResNet mask is shown as the white outline in the viewer.'}</p>
+      <p class="small">Code and weights: <a href="https://github.com/anhtrnyaleedu/HE" target="_blank" rel="noopener">anhtrnyaleedu/HE</a> (Tran et al., <i>npj Digit Med</i> 2024).</p></div></div>`;
+  if (y.segSource !== 'SAHVAI IPH') { const z = viewer.z; viewer.show(R.g, R.S.overlay, { mask: R.res.mask, range: R.S.hematoma?.slices || null, gt: y.maskGrid, gtName: 'Yale SegResNet' }); viewer.setSlice(z); }
+}
+
+// ---------- follow-up CT: conventional and revised expansion ----------
+function vols(labels, sp) {
+  const vox = sp[0] * sp[1] * sp[2] / 1000; let ich = 0, ivh = 0; for (const l of labels) { if (l === 2) ich++; else if (l === 3) ivh++; }
+  return { ich: ich * vox, ivh: ivh * vox };
+}
+function followup(res) {
+  const v = vols(res.labels, res.grid.sp);
+  FU = { res, v, date: res.info && res.info.series_date };
+  renderFU();
+}
+function renderFU() {
+  if (!R) return;
+  const b = vols(R.res.labels, R.g.sp), box = q('.futable');
+  const val = (id, d) => { const el = $(id); return el && el.value !== '' ? +el.value : d; };
+  const ich0 = val('fu-ich0', +b.ich.toFixed(1)), ivh0 = val('fu-ivh0', +b.ivh.toFixed(1)), ich1 = val('fu-ich1', FU ? +FU.v.ich.toFixed(1) : null), ivh1 = val('fu-ivh1', FU ? +FU.v.ivh.toFixed(1) : null);
+  const E = ich1 != null ? expansion({ ich0, ich1, ivh0, ivh1 }) : null;
+  const yes = (v, extra = '') => v ? `<b class="yes">Yes</b>${extra}` : '<b class="no">No</b>';
+  box.innerHTML = `<table class="futab"><tr><th></th><th>Baseline</th><th>Follow-up</th><th>Change</th></tr>
+    <tr><td>ICH (all IPH) mL</td><td><input id="fu-ich0" type="number" step="0.1" value="${ich0}"></td><td><input id="fu-ich1" type="number" step="0.1" value="${ich1 ?? ''}" placeholder="drop CT or type"></td><td>${E ? `${E.dICH >= 0 ? '+' : ''}${E.dICH.toFixed(1)} mL${E.rel != null ? ` (${E.rel >= 0 ? '+' : ''}${(100 * E.rel).toFixed(0)}%)` : ''}` : ''}</td></tr>
+    <tr><td>IVH mL</td><td><input id="fu-ivh0" type="number" step="0.1" value="${ivh0}"></td><td><input id="fu-ivh1" type="number" step="0.1" value="${ivh1 ?? ''}"></td><td>${E ? `${E.dIVH >= 0 ? '+' : ''}${E.dIVH.toFixed(1)} mL${E.newIVH ? ' · new IVH' : ''}` : ''}</td></tr></table>
+    ${E ? `<div class="scores"><div class="scard"><h4>Conventional HE <small>&gt; 6 mL or &gt; 33%</small></h4><p class="big">${yes(E.conventional)}</p></div>
+      <div class="scard"><h4>Revised HE (rHE) <small>ICH ≥ 6 mL / ≥ 33%, IVH ≥ 1 mL, or new IVH</small></h4><p class="big">${yes(E.revised, E.revisedByIVHOnly ? ' <small>(by IVH growth only)</small>' : '')}</p></div>
+      <div class="scard"><h4>Other absolute thresholds</h4><table><tr><td>≥ 3 mL</td><td>${E.thresholds.ge3 ? 'yes' : 'no'}</td></tr><tr><td>≥ 6 mL</td><td>${E.thresholds.ge6 ? 'yes' : 'no'}</td></tr><tr><td>≥ 9 mL</td><td>${E.thresholds.ge9 ? 'yes' : 'no'}</td></tr><tr><td>≥ 12.5 mL</td><td>${E.thresholds.ge12_5 ? 'yes' : 'no'}</td></tr></table></div></div>
+      <p class="small">Volumes are SAHVAI segmentations (all IPH; IVH) unless typed. New IVH here: &lt; ${NEW_IVH_mL} mL at baseline and ≥ ${NEW_IVH_mL} mL at follow-up, because tiny AI-labelled specks are not reliable. Check both segmentations, especially after surgery or a drain, which change the volumes for other reasons.${FU ? ` Follow-up source: ${esc(FU.res.info.series_description || FU.res.info.source || '?')}.` : ''}</p>` : ''}`;
+  box.querySelectorAll('input').forEach(el => el.onchange = renderFU);
+}
+const fud = q('.fudrop');
+q('.fu-files').onchange = e => { run(e.target.files, 'follow-up CT', 'followup'); e.target.value = ''; };
+q('.fu-folder').onchange = e => { run(e.target.files, 'follow-up CT', 'followup'); e.target.value = ''; };
+fud.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); fud.classList.add('over'); });
+fud.addEventListener('dragleave', () => fud.classList.remove('over'));
+fud.addEventListener('drop', async e => { e.preventDefault(); e.stopPropagation(); fud.classList.remove('over'); run(await filesFromDataTransfer(e.dataTransfer), 'follow-up CT', 'followup'); });
+window.HESIGNS_FOLLOWUP = (files) => run(files, 'follow-up CT', 'followup');   // (used by the automated tests)
 
 const SIGN_ORDER = ['blend', 'blackhole', 'hypodensity', 'swirl', 'island', 'satellite', 'irregular', 'heterogeneous', 'fluid', 'spot', 'leakage', 'iodine'];
 const INFO = Object.fromEntries(SIGN_INFO.map(s => [s.key, s]));
@@ -125,7 +206,7 @@ function show() {
   viewer.dl.querySelector('[data-k=ct]').onclick = async () => save(await niftiGz(toInt16(g.hu), g, { datatype: 4, description: 'working grid (HU)' }), 'ich-ct.nii.gz');
   viewer.dl.querySelector('[data-k=png]').onclick = () => viewer.png(`ich-signs-slice-${viewer.z + 1}.png`);
 
-  renderSigns(); renderScores(); renderROI();
+  renderSigns(); renderScores(); renderROI(); renderFU();
   const i = res.info || {};
   q('.details').innerHTML = [
     i.series_description !== undefined ? `Series <b>${esc(i.series_description || '?')}</b> (${esc(i.series_selection)})` : `Source <b>${esc(i.source || '?')}</b>`,
@@ -224,6 +305,9 @@ function report() {
     signs: Object.fromEntries(SIGN_ORDER.map(k => [k, { name: INFO[k].name, modality: INFO[k].modality, auto: S.signs[k].auto, reader: override[k] ?? null, used: eff(k) ?? null, detail: S.signs[k].detail, slices: [...new Set(S.signs[k].evidence.map(e => e.slice).filter(z => z != null))].map(z => z + 1), definition: INFO[k].def, reference: INFO[k].ref }])),
     clinical: { onset_to_ct_h: h, warfarin: $('warfarin').checked, recurrent_ich: $('recurrent').checked, ivh: ivhYes() },
     scores: S.status === 'ok' ? { BAT: batScore({ blend: !!eff('blend'), hypodensity: !!eff('hypodensity'), hours: h }), BRAIN: brainScore({ volume: S.volumes.main, recurrent: $('recurrent').checked, warfarin: $('warfarin').checked, ivh: ivhYes(), hours: h }), uHG_mL_per_h: h > 0 ? r1(S.volumes.main / h) : null, spot_sign_score: S.signs.spot.score ?? null } : null,
+    yale_model: R.yale ? { model: 'Tran et al., npj Digit Med 2024 (github.com/anhtrnyaleedu/HE)', target: 'HE >= 6 mL', p: R.yale.mc.passes ? R.yale.mc.p : R.yale.det.p, p_deterministic: R.yale.det.p, mc_passes: R.yale.mc.passes, mc_sd: R.yale.mc.sd, entropy_bits: R.yale.mc.entropy, mask: R.yale.segSource, mask_mL: R.yale.segVolume, device: R.yale.device, seconds: R.yale.seconds } : null,
+    follow_up: (() => { const g = id => { const el = $(id); return el && el.value !== '' ? +el.value : null; }; const E = g('fu-ich1') != null ? expansion({ ich0: g('fu-ich0'), ich1: g('fu-ich1'), ivh0: g('fu-ivh0') || 0, ivh1: g('fu-ivh1') || 0 }) : null;
+      return E ? { ich_mL: [g('fu-ich0'), g('fu-ich1')], ivh_mL: [g('fu-ivh0'), g('fu-ivh1')], ...E, definitions: { conventional: 'ICH growth > 6 mL or > 33% (Dowlatshahi 2011)', revised: 'ICH growth >= 6 mL or >= 33%, IVH growth >= 1 mL, or new IVH (Yogendrakumar, Stroke 2020)' } } : null; })(),
     deepmedx_roi: roi ? { scale: roi.scale, window_HU: roi.window, planes: roi.planes.map(p => ({ name: p.name, grid_slice: +(p.slice + 1).toFixed(2), crop_px: [p.w, p.h] })), classifier: 'ViT weights not public; not run' } : null,
     regions: S.regions, satellites: S.satellites, islands: (S.islands || []).map(s => ({ ...s, k: undefined, slice: s.k + 1 })), spots: S.spots, criteria: S.criteria, warnings: S.warnings,
   };

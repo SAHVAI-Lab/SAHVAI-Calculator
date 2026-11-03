@@ -37,6 +37,7 @@ export const CRITERIA = {
   islandSeparate: 3, islandTotal: 4, islandMaxArea_mm2: 80, islandMaxGap_mm: 20,
   focusMin_mm2: 2, focusMinHU: 50, focusAboveBrain_HU: 15, focusMaxHU: 100, focusCalcHU: 110, focusSkull_mm: 4, focusMaxElong: 3, focusMetal_mm: 3, metalHU: 2000, metalMinPx: 5, catheterHU: 1000,
   spotHU: 120, spotMinDiam_mm: 1.5, contrast_mL: 2,
+  calcHU: 150, calcMaxHU: 800, calcNear_mm: 5,   // NCCT calcification in or near the clot (a spot-sign mimic on CTA; Gazzola et al., Stroke 2008)
 };
 
 // overlay labels written into the result's label map
@@ -340,6 +341,22 @@ export function analyseSigns(g, labels, raw, mask, opts = {}) {
   if (catheterSlices.length) out.warnings.push(`A catheter or other dense object (≥ ${C.catheterHU} HU) lies within 15 mm of the hematoma on slice${catheterSlices.length > 1 ? 's' : ''} ${catheterSlices.map(k => k + 1).join(', ')}: check density findings there for streak artefact.`);
   const solidity = convexSolidity(sliceData[zMax].M, w, h);
 
+  // ---- NCCT calcification in or within 5 mm of the clot: on a CTA it would mimic a spot sign (Gazzola et al., Stroke 2008)
+  const calcs = [];
+  if (!contrast) for (let k = z0; k <= z1; k++) {
+    const d = sliceData[k]; if (!d.area || denseMetal[k]) continue;
+    // denser than 800 HU on a 5 mm slab, or within 3 mm of such a voxel: a catheter, coil or bone, not a calcification
+    const E = d.E || fillHoles(d.M, w, h), near = dilate(E, w, h, Math.round(mm(C.calcNear_mm))), cm = new Uint8Array(Q), dense = new Uint8Array(Q);
+    for (let q = 0; q < Q; q++) if (d.H[q] >= C.calcMaxHU) dense[q] = 1;
+    const nearDense = dilate(dense, w, h, Math.round(mm(3)));
+    for (let q = 0; q < Q; q++) if (near[q] && !nearDense[q] && d.H[q] >= C.calcHU) cm[q] = 1;
+    const T = label2d(cm, w, h, true), tm = Array.from({ length: T.n + 1 }, () => []);
+    for (let q = 0; q < Q; q++) if (T.lab[q]) tm[T.lab[q]].push(q);
+    for (let r = 1; r <= T.n; r++) { const px = tm[r]; if (px.length < 2) continue; let mx = 0; for (const q of px) mx = Math.max(mx, d.H[q]);
+      const mo = moments(px, w, sx, sy); calcs.push({ slice: k, x: Math.round(mo.cx + x0), y: Math.round(mo.cy + y0), maxHU: Math.round(mx), inside: px.some(q => E[q]) }); }
+  }
+  out.calcifications = calcs;
+
   // ---- contrast: spot sign candidates inside the hematoma
   const spots = [];
   if (contrast) {
@@ -388,11 +405,13 @@ export function analyseSigns(g, labels, raw, mask, opts = {}) {
   out.signs.satellite = sign(satellites.length > 0, satellites.map(f => ({ slice: f.k, x: Math.round(f.cx + x0), y: Math.round(f.cy + y0) })),
     satellites.length ? satellites.slice(0, 6).map(f => `slice ${f.k + 1}: ${f.diam_mm.toFixed(1)} mm focus, ${f.gap_mm.toFixed(1)} mm from the clot, ${f.meanHU.toFixed(0)} HU`).join('; ') + (satellites.length > 6 ? `; +${satellites.length - 6} more` : '') : 'no separate focus < 10 mm within 1–20 mm');
   if (contrast) {
+    out.warnings.push('Spot-sign mimics (Gazzola et al., Stroke 2008): calcification (tumour, choroid plexus) seen on the NCCT, and vascular lesions (micro-AVM, aneurysm, moyamoya pseudoaneurysm) with vessels entering the clot from its edge. Compare every candidate with the NCCT and the CTA source images.');
     const n = spots.length, maxD = n ? Math.max(...spots.map(s => s.diam_mm)) : 0, maxH = n ? Math.max(...spots.map(s => s.maxHU)) : 0;
     const sss = n ? (n >= 3 ? 2 : 1) + (maxD >= 5 ? 1 : 0) + (maxH >= 180 ? 1 : 0) : 0;
     out.signs.spot = { auto: n > 0, evidence: spots.map(s => ({ slice: s.k, x: Math.round(s.cx + x0), y: Math.round(s.cy + y0) })),
       detail: n ? `${n} focus/foci ≥ ${C.spotHU} HU inside the clot, not touching its edge; max ${maxH.toFixed(0)} HU, ${maxD.toFixed(1)} mm; spot sign score ${sss}/4 (approximate on 5 mm slabs)` : `no focus ≥ ${C.spotHU} HU inside the clot`, score: sss };
-  } else out.signs.spot = { auto: null, evidence: [], detail: 'needs CT angiography (this scan is non-contrast)' };
+  } else out.signs.spot = { auto: null, evidence: calcs.map(c => ({ slice: c.slice, x: c.x, y: c.y })),
+    detail: 'needs CT angiography (this scan is non-contrast)' + (calcs.length ? `. Calcification ${calcs.some(c => c.inside) ? 'inside' : 'within 5 mm of'} the clot on slice${calcs.length > 1 ? 's' : ''} ${[...new Set(calcs.map(c => c.slice + 1))].join(', ')} (max ${Math.max(...calcs.map(c => c.maxHU))} HU): on a CTA it would mimic a spot sign (Gazzola et al., Stroke 2008)` : '') };
   out.signs.leakage = { auto: null, evidence: [], detail: 'needs CTA plus a delayed (≈5 min) phase: > 10% HU rise in a 10 mm ROI' };
   out.signs.iodine = { auto: null, evidence: [], detail: 'needs dual-energy CT iodine maps' };
 
@@ -459,6 +478,21 @@ function convexSolidity(M, w, h) {
   const hull = lo.slice(0, -1).concat(up.slice(0, -1));
   let A = 0; for (let i = 0; i < hull.length; i++) { const [x1, y1] = hull[i], [x2, y2] = hull[(i + 1) % hull.length]; A += x1 * y2 - x2 * y1; }
   return area / (Math.abs(A) / 2 || 1);
+}
+
+// ---------- expansion between a baseline and a follow-up CT ----------
+// conventional HE: ICH growth > 6 mL or > 33% (Dowlatshahi et al., Neurology 2011; as in Yu et al. 2026)
+// revised HE (rHE): ICH growth >= 6 mL or >= 33%, IVH growth >= 1 mL, or new IVH (Yogendrakumar et al., Stroke 2020;51:1120-1127;
+//   used by Ning, Yu et al., Sci Rep 2025;15:32021). "New IVH" from an AI segmentation: < 0.5 mL at baseline, >= 0.5 mL at follow-up.
+export const NEW_IVH_mL = 0.5;
+export function expansion({ ich0, ich1, ivh0 = 0, ivh1 = 0 }) {
+  if ([ich0, ich1].some(v => v == null || isNaN(v))) return null;
+  const dICH = ich1 - ich0, rel = ich0 > 0 ? dICH / ich0 : null, dIVH = (ivh1 || 0) - (ivh0 || 0);
+  const newIVH = (ivh0 || 0) < NEW_IVH_mL && (ivh1 || 0) >= NEW_IVH_mL;
+  const conventional = dICH > 6 || (rel != null && rel > 0.33);
+  const ichPart = dICH >= 6 || (rel != null && rel >= 0.33), ivhPart = dIVH >= 1 || newIVH;
+  return { dICH, rel, dIVH, newIVH, conventional, revised: ichPart || ivhPart, revisedByIVHOnly: !ichPart && ivhPart,
+    thresholds: { ge3: dICH >= 3, ge6: dICH >= 6, ge9: dICH >= 9, ge12_5: dICH >= 12.5 } };
 }
 
 // ---------- scores ----------
@@ -533,8 +567,8 @@ function vitInput(img, w, h) {
 // the reference list of CT signs of hematoma expansion (shown on the page, also used for the report)
 export const SIGN_INFO = [
   { key: 'spot', name: 'Spot sign', modality: 'CTA', group: 'Contrast extravasation',
-    def: '≥ 1 focus of contrast pooling within the hematoma, ≥ 120 HU, discontinuous from adjacent normal or abnormal vessels, any size and shape.',
-    ref: 'Wada et al., Stroke 2007; Delgado Almandoz et al., Stroke 2009 (spot sign score)' },
+    def: '≥ 1 focus of contrast pooling within the hematoma, ≥ 120 HU, discontinuous from adjacent normal or abnormal vessels, any size and shape. Mimics: calcification (check the NCCT) and vascular lesions with vessels entering from the edge (micro-AVM, aneurysm, moyamoya).',
+    ref: 'Wada et al., Stroke 2007; Delgado Almandoz et al., Stroke 2009 (spot sign score); Gazzola et al., Stroke 2008;39:1177-1183 (mimics)' },
   { key: 'leakage', name: 'Leakage sign', modality: 'CTA + delayed', group: 'Contrast extravasation',
     def: '> 10% rise in HU within a 10 mm ROI in the hematoma between the CTA phase and a delayed phase about 5 minutes later.',
     ref: 'Orito et al., Stroke 2016;47:958-963' },

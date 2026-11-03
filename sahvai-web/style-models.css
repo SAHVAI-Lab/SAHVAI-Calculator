@@ -214,3 +214,10 @@ body.busy .panel .drop:not(.busy) { opacity: .7; }
 .refcard { display: flex; gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: .84rem; }
 .refcard b { color: var(--mayo-dark); }
 .refcard p { margin: 4px 0 0; }
+.he .fudrop { padding: 12px; margin: 8px 0; }
+.he .fudrop .big { font-size: 1rem; }
+.futab { border-collapse: collapse; font-size: .86rem; margin: 6px 0 10px; }
+.futab th, .futab td { padding: 3px 10px; border-bottom: 1px solid #e1e8f5; text-align: left; }
+.futab input { width: 90px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; }
+b.yes { color: #c2185b; } b.no { color: #3f8f55; }
+.yale .bar { margin: 6px 0; }

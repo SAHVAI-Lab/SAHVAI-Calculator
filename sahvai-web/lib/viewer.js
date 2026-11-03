@@ -19,8 +19,8 @@ export class Viewer {
         <label class="row"><input class="overlay" type="checkbox" checked> Segmentation overlay</label>
         <label class="row">Opacity <input class="opacity" type="range" min="0" max="100" value="55" aria-label="Overlay opacity"></label>
         <label class="row outline-row" hidden><input class="outline" type="checkbox"> Brain outline (quality check)</label>
-        <label class="row gt-row" hidden><input class="gtline" type="checkbox" checked> Expert label outline</label>
-        <div class="legend">${Object.values(classes).map(c => `<span><i style="background:rgb(${c.color.join(',')})"></i>${c.key}</span>`).join('')}<span class="gt-legend" hidden><i class="gt-swatch"></i>Expert</span></div>
+        <label class="row gt-row" hidden><input class="gtline" type="checkbox" checked> <span class="gt-name">Expert label</span> outline</label>
+        <div class="legend">${Object.values(classes).map(c => `<span><i style="background:rgb(${c.color.join(',')})"></i>${c.key}</span>`).join('')}<span class="gt-legend" hidden><i class="gt-swatch"></i><span class="gt-name">Expert</span></span></div>
         <p class="tip">Scroll over the image or use ↑/↓ to change slice. Click the chart to jump.</p>
         <canvas class="chart" height="120" aria-label="Segmented volume per slice"></canvas>
         <div class="dl"></div>
@@ -48,7 +48,8 @@ export class Viewer {
   }
 
   // g: {nx, ny, nz, sp, hu}; labels Uint8; opts: {mask, gt, range: [z0, z1]}
-  show(g, labels, { mask = null, gt = null, range = null } = {}) {
+  show(g, labels, { mask = null, gt = null, range = null, gtName = null } = {}) {
+    this.root.querySelectorAll('.gt-name').forEach((el, i) => { el.textContent = gtName || (i ? 'Expert' : 'Expert label'); });
     const P = g.nx * g.ny, ids = Object.keys(this.classes).map(Number), maxId = Math.max(...ids);
     const per = Array.from({ length: g.nz }, () => new Array(maxId + 1).fill(0));
     for (let k = 0; k < g.nz; k++) for (let p = 0; p < P; p++) per[k][labels[k * P + p]]++;
