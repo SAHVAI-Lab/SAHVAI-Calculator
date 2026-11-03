@@ -51,6 +51,10 @@ Licence: [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 Internati
 
 `demo/deepbleed/jhu_mistie_01_ct.nii.gz` is `01/BRAIN_1_Anonymized.nii.gz`, unchanged, from Hanley D, Mould WA, Ullman N, Muschelli J. Head CT scans associated with "Validated automatic brain extraction of head CT images". Johns Hopkins Research Data Repository, V1, 2019. doi:10.7281/T1/CZDPSX (MISTIE II/III and CLEAR III), [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
+### ICH expansion signs page
+
+`hesigns.html`, `app-hesigns.js` and `lib/hesigns.js` are SAHVAI Lab code under the app licence above and use no third-party model weights (the segmentation is the SAHVAI / BrainHemoAI model). The region-of-interest step of the DeepMedX sICH_HE pipeline (Yu Q, et al. *npj Digit Med* 2026;9:39; [github.com/DeepMedX/sICH_HE](https://github.com/DeepMedX/sICH_HE), non-commercial research licence) is re-implemented from its description and notebook, with attribution; no DeepMedX code or weights are copied. The sign schematics were drawn for this page.
+
 ### SAH Swin UNETR (Valladolid)
 
 **SAH Swin UNETR page.** `models/sahswin/sahswin.onnx.0`–`.2` are the weights of `SWIN_UNETR_48_100_best_metric_model.pth`, linked from the README of [smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction](https://github.com/smcch/Subarachnoid_Hemorrhage_segmentation_and_mortality_prediction), in ONNX format, full precision and unchanged (ONNX output matches PyTorch to 1.4e-5, 0 voxels different), split into three parts for hosting. `models/sahswin/ct_template2mni_2mm.nii.gz` is the repository's `ct_template2mni.nii.gz`, smoothed and subsampled to 2 mm for registration. `lib/sahswin.js` re-implements the steps of its `inference_2.py` (MONAI) and the geometry of its preprocessing; no code from the repository is included.

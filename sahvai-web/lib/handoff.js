@@ -42,12 +42,13 @@ export const TARGETS = {
   sahswin: { page: 'sahswin.html', tab: 'sahswin', name: 'SAH Swin UNETR', does: 'blood volume after aneurysmal SAH (Valladolid)' },
   claim: { page: 'claim.html', tab: 'claim', name: 'CLAIM aSAH', does: 'SAH, IVH, ICH, SDH, aneurysm and ventricles (Charité)' },
   deepbleed: { page: 'deepbleed.html', tab: 'deepbleed', name: 'DeepBleed ICH', does: 'ICH + IVH volume (MISTIE, Johns Hopkins)' },
+  hesigns: { page: 'hesigns.html', tab: 'hesigns', name: 'ICH expansion signs', does: 'blend, black hole, island, spot… signs; BAT and BRAIN scores' },
   blast: { page: 'blast.html', tab: 'blast', name: 'BLAST-CT', does: 'traumatic IPH, extra-axial blood (SDH, EDH, tSAH), oedema, IVH' },
 };
 // which tools suit which subtype, best first
 export const ROUTES = {
   SAH: ['web', 'sahswin', 'claim'],
-  IPH: ['deepbleed', 'web', 'blast'],
+  IPH: ['deepbleed', 'hesigns', 'web', 'blast'],
   IVH: ['web', 'deepbleed', 'claim'],
   SDH: ['blast', 'claim'],
   EDH: ['blast'],

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICH expansion signs in the browser: hematoma expansion CT signs</title>
+<meta name="description" content="Finds and measures CT signs of intracerebral hematoma expansion (blend, black hole, hypodensity, swirl, island, satellite, irregular shape, heterogeneous density, fluid level; spot sign on CTA) and computes the BAT and BRAIN scores, entirely in the browser.">
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style-models.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+</head>
+<body data-page="hesigns" class="he">
+<header class="top">
+  <div class="wrap">
+    <h1>ICH expansion signs <span>in the browser</span></h1>
+    <p>Drop a head CT with an intracerebral hemorrhage to find the CT signs that predict hematoma expansion: blend, black hole, hypodensity, swirl, island and satellite signs, irregular shape, heterogeneous density and fluid level on non-contrast CT, and spot-sign candidates on CT angiography. It then gives the BAT and BRAIN scores and prepares the image patches of the DeepMedX end-to-end expansion pipeline. Everything runs on this device.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="headsup.html">HEADS-UP detector</a><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="deepbleed.html">DeepBleed ICH</a><a href="hesigns.html" aria-current="page">ICH expansion signs</a><a href="sahswin.html">SAH Swin UNETR</a><a href="rhuh.html">RHUH dataset</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="Before you start">
+    <div class="note warn">
+      <h2>Research and education use only</h2>
+      <p>Not a medical device and not validated for clinical use. The signs are found by rules written from their published visual definitions, applied to an AI segmentation: treat every finding as a candidate for a reader to confirm, and an absent sign as not excluded. Do not use it for diagnosis or treatment decisions.</p>
+    </div>
+    <div class="note">
+      <h2>Your images stay on this device</h2>
+      <p>Files are read and processed inside this browser tab. No image data or results are uploaded. Only the page, the segmentation model (26 MB, cached) and the demo cases are downloaded.</p>
+    </div>
+    <div class="note">
+      <h2>What you need</h2>
+      <ul>
+        <li>An <b>axial head CT</b> with a spontaneous ICH: non-contrast for the NCCT signs, CT angiography for spot-sign candidates. DICOM zip or folder, NIfTI or NRRD.</li>
+        <li>A recent desktop Chrome or Edge; WebGPU is fastest. About 30 s to 3 min per scan.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Settings">
+    <div class="group" role="radiogroup" aria-label="Compute device">
+      <span class="lbl">Compute</span>
+      <label><input type="radio" name="device" value="auto" checked> Auto</label>
+      <label><input type="radio" name="device" value="webgpu"> WebGPU</label>
+      <label><input type="radio" name="device" value="wasm"> CPU</label>
+    </div>
+    <div class="group">
+      <span class="lbl">Head alignment</span>
+      <label><input type="radio" name="align" value="auto" checked> Auto</label>
+      <label><input type="radio" name="align" value="manual"> Set</label>
+      <input id="angle" class="angle" type="number" min="-45" max="45" step="1" value="0" disabled aria-label="Rotation in degrees"> °
+    </div>
+    <div class="group" role="radiogroup" aria-label="Hematoma definition">
+      <span class="lbl">Hematoma</span>
+      <label title="The largest connected intraparenchymal (IPH) component, as in the published sign definitions"><input type="radio" name="hem" value="iph" checked> IPH only</label>
+      <label title="Include intraventricular extension in the hematoma (the DeepMedX segmentation masks include it)"><input type="radio" name="hem" value="ivh"> IPH + IVH</label>
+    </div>
+    <div id="caps" class="caps"></div>
+  </section>
+
+  <section class="panel" id="panel-he" aria-labelledby="h-he">
+    <header class="phead">
+      <span class="num">E</span>
+      <div><h2 id="h-he">Hematoma expansion signs <span>NCCT signs · CTA spot sign · BAT and BRAIN scores · DeepMedX patches</span></h2>
+        <p class="sub">Step 1 segments the hemorrhage with SAHVAI (BrainHemoAI Hybrid 2D/3D UNet) on the 0.5 × 0.5 × 5 mm grid that the DeepMedX pipeline also uses. Step 2 reads the expansion signs inside and around the largest intraparenchymal hematoma. Step 3 combines them with the clinical details you enter.</p></div>
+      <span class="origin">SAHVAI Lab · signs per the Morotti et al. 2019 consensus · DeepMedX sICH_HE</span>
+    </header>
+
+    <details class="clin" open>
+      <summary>Clinical details for the scores (optional, stay on this device)</summary>
+      <div class="clingrid">
+        <label>Onset (last known well) to this CT <input id="hours" type="number" min="0" max="72" step="0.1" placeholder="hours"> h</label>
+        <label><input id="warfarin" type="checkbox"> Warfarin (or other oral anticoagulant) at onset</label>
+        <label><input id="recurrent" type="checkbox"> Recurrent ICH</label>
+        <label>IVH extension <select id="ivh"><option value="auto">from the scan</option><option value="yes">yes</option><option value="no">no</option></select></label>
+      </div>
+    </details>
+
+    <div class="drop" tabindex="0">
+      <p class="big"><b>Drop a head CT here</b></p>
+      <p class="hint">A zip of a DICOM study, a DICOM folder, loose DICOM files, a .nii / .nii.gz or a .nrrd volume. From a study the axial non-contrast head series nearest 5 mm is used; if the only series is a CTA, it is used and spot-sign candidates are looked for instead of the NCCT signs.</p>
+      <div class="buttons">
+        <label class="btn">Choose file(s)<input class="f-files" type="file" multiple accept=".zip,.nii,.gz,.nrrd,.dcm,application/zip,application/dicom,*/*"></label>
+        <label class="btn">Choose folder<input class="f-folder" type="file" webkitdirectory></label>
+      </div>
+      <div class="buttons demos">
+        <button class="btn ghost" type="button" data-demo="0">Demo: ICH + IVH + SAH (BHSD)</button>
+        <button class="btn ghost" type="button" data-demo="1">Demo: ICH after drain (MISTIE/CLEAR)</button>
+      </div>
+    </div>
+    <div class="status" hidden><div class="stage"><span class="stage-name">Starting</span><span class="pct"></span></div><div class="bar"><i></i></div></div>
+
+    <div class="results" hidden>
+      <div class="verdict"></div>
+      <div class="vols summary"></div>
+      <div class="warnbox" hidden></div>
+      <div class="viewerhost viewer"></div>
+      <h3 class="sect">The signs <small>click a card to jump to its slice · set <i>Reader</i> to confirm or reject a finding; scores use the reader's call when given</small></h3>
+      <div class="signs"></div>
+      <h3 class="sect">Scores</h3>
+      <div class="scores"></div>
+      <h3 class="sect">DeepMedX end-to-end pipeline <small>Yu et al., <i>npj Digit Med</i> 2026</small></h3>
+      <div class="dmx"></div>
+      <div class="details"></div>
+    </div>
+
+    <div class="cite"><h3>Method, citations and disclaimer</h3>
+      <p><b>Segmentation.</b> SAHVAI Web (BrainHemoAI Hybrid 2D/3D UNet; Hu P, et al. <i>NeuroImage</i> 2023;279:120321, <a href="https://doi.org/10.1016/j.neuroimage.2023.120321">doi:10.1016/j.neuroimage.2023.120321</a>), labels SAH, IPH and IVH on a 0.5 × 0.5 mm, 5 mm grid. The hematoma is the largest 26-connected IPH component (optionally with IVH).</p>
+      <p><b>Sign definitions.</b> Morotti A, Boulouis G, Dowlatshahi D, et al. Standards for detecting, interpreting, and reporting noncontrast computed tomographic markers of intracerebral hemorrhage expansion. <i>Ann Neurol</i> 2019;86:480–492, and the original reports cited on each card. Review: Liu S, Fu W, Tang X, Fan Y. CT-based prediction of hematoma expansion and adverse outcomes after intracerebral hemorrhage. <i>GeroScience</i> 2026, <a href="https://doi.org/10.1007/s11357-026-02478-3">doi:10.1007/s11357-026-02478-3</a>.</p>
+      <p><b>Scores.</b> BAT: Morotti A, et al. <i>Stroke</i> 2018;49:1163–1169. BRAIN: Wang X, et al. <i>Stroke</i> 2015;46:376–381. Spot sign score: Delgado Almandoz JE, et al. <i>Stroke</i> 2009;40:2994–3000.</p>
+      <p><b>DeepMedX pipeline.</b> Yu Q, Fan X, Li J, et al. An end-to-end deep learning pipeline for hematoma expansion prediction in spontaneous intracerebral hemorrhage based on non-contrast computed tomography. <i>npj Digit Med</i> 2026;9:39, <a href="https://doi.org/10.1038/s41746-025-02213-w">doi:10.1038/s41746-025-02213-w</a>; code <a href="https://github.com/DeepMedX/sICH_HE">github.com/DeepMedX/sICH_HE</a> (non-commercial research licence). Their region-of-interest step (<code>crop2DROI.ipynb</code>) is re-implemented here in JavaScript; their U-Mamba, Diffusion-UKAN and ViT weights are not public, so their classifier does not run here.</p>
+      <p class="disc"><b>Disclaimer.</b> For research and education only. Not a medical device; not cleared or approved by the FDA, CE or any regulator; not validated for clinical use. The detectors have been checked on synthetic phantoms and inspected on a few public cases, not validated against expert sign reads. Do not use for diagnosis, prognosis or treatment decisions.</p>
+    </div>
+  </section>
+
+  <section class="panel ref" aria-labelledby="h-ref">
+    <header class="phead"><div><h2 id="h-ref">CT signs of hematoma expansion <span>reference</span></h2>
+      <p class="sub">The figure of Liu et al. (<i>GeroScience</i> 2026, Fig. 2) shows ten panels and nine signs (the blend sign twice): three contrast-extravasation signs (spot, iodine, leakage) and six NCCT signs (blend, black hole, island, satellite, hypodensity, swirl). Irregular shape, heterogeneous density and fluid level complete the NCCT set of the 2019 consensus (Morotti et al., <i>Ann Neurol</i>). Schematics drawn for this page (anterior at the top).</p></div></header>
+    <div class="refgrid"></div>
+  </section>
+
+  <section class="how">
+    <h2>How the signs are read</h2>
+    <ol>
+      <li><b>Hematoma.</b> The largest connected IPH component of the SAHVAI segmentation; each axial section is hole-filled so encapsulated low-density areas stay inside it. Density signs are read on sections with at least 30% of the largest section's area (end sections are partial-volumed) and not on sections with dense metal (a coil or clip, ≥ 2000 HU) in the brain; a catheter near the clot is flagged.</li>
+      <li><b>Low-density regions.</b> The CT is lightly smoothed (σ ≈ 0.5 mm). Pixels ≥ 12 HU below the section's hyperdense reference (75th percentile of the clot core) and ≥ 12 HU are candidates; a region must reach ≥ 1.5 mm inside the clot edge, be ≥ 7 mm² and ≥ 2 mm wide. It is <i>encapsulated</i> if growing it 1.5 mm through low-density pixels does not reach the clot edge. Its HU difference is measured against the hyperdense ring 0.5–2 mm around it.</li>
+      <li><b>Density signs.</b> Hypodensity: encapsulated, ≥ 15 HU difference. Black hole: encapsulated, ≥ 28 HU. Swirl: encapsulated, iso- or hypodense to brain (≤ brain + 8 HU), on ≥ 2 contiguous slices. Blend: open to the edge, ≥ 18 HU, ≥ 15 mm², ≤ 60% of the section, a ≥ 5 mm interface with a sharp edge (≥ 4 HU/mm), and still denser than brain. Fluid level: the low-density part lies wholly above a straight (RMS ≤ 0.75 mm), near-horizontal (≤ 10°) interface ≥ 8 mm long spanning half the clot. Heterogeneous density: ≥ 3 low-density foci (≥ 2 mm²) on the largest section.</li>
+      <li><b>Shape signs.</b> Lobules: what an opening with a disk (radius 0.35 × the section's equivalent radius, 2–8 mm) removes from the section; bubble- or sprout-like ones are ≤ 80 mm² with a neck narrower than themselves. Separate small hematomas: other blood labels or compact (elongation ≤ 3) foci of 50–100 HU, ≥ 2 mm², ≥ 4 mm inside the brain, away from metal and calcification. Satellite: a separate focus &lt; 10 mm across, 1–20 mm from the clot. Island: ≥ 3 separate, or ≥ 4 separate plus connected, on one section. Irregular shape: ≥ 2 lobules or separate foci within 10 mm on the largest section.</li>
+      <li><b>Contrast.</b> A scan with ≥ 2 mL of 130–600 HU voxels inside the brain is treated as contrast-enhanced: NCCT signs are not read, and foci ≥ 120 HU, ≥ 1.5 mm, inside the clot and not touching its edge are spot-sign candidates. Thin CTA slices are averaged into 5 mm slabs, which lowers small spots' HU.</li>
+    </ol>
+    <p class="small">Self-test: <code>node tools/hesigns_selftest.mjs</code> injects each sign into a synthetic hematoma and checks it is found (and that a plain hematoma has none). On public demo cases the outputs were inspected by eye; no expert-read sign data set was available.</p>
+  </section>
+
+  <details id="logbox">
+    <summary>Log</summary>
+    <pre id="log"></pre>
+  </details>
+</main>
+
+<footer class="wrap">
+  <p><b>Research and education use only. Not a medical device.</b> Images are processed locally and never uploaded.</p>
+  <p><b>Acknowledgements.</b> We thank Qiang Yu, Min Wu, Juan Peng and the DeepMedX group for publishing their end-to-end pipeline, Dr Ping Hu and the BrainHemoAI group for their model, and the authors of the sign definitions. Inclusion here does not imply their endorsement.</p>
+  <p>Browser design adapted from <a href="https://github.com/jarrelscy/radar-web">RADAR in the browser</a> (CC BY-NC-SA 4.0). Runs on <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>. See <a href="LICENSE.md">licences</a>.</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab.</p>
+</footer>
+<script type="module" src="app-hesigns.js?v=e1"></script>
+</body>
+</html>

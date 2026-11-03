@@ -113,8 +113,11 @@ async function analyseVolume(vol, info, data, t0, deviceIn, extra = {}, pre = ''
   const seconds = (performance.now() - t0) / 1000;
   log(`total ${seconds.toFixed(1)}s`);
   const grid = { nx: g.nx, ny: g.ny, nz: g.nz, sp: g.sp, affine: g.affine, hu: g.hu };
+  // data.wantRaw (ICH expansion signs page): also send the labels before small fragments are removed, so small
+  // satellite / island haematomas can be found
+  const raw = data.wantRaw ? { raw: res.raw } : {};
   self.postMessage({ type: 'result', grid, labels: res.labels, mask: res.mask, volumes: res.volumes, angle: res.angle, slices: res.slices, windows: res.windows,
-    warnings: res.warnings, info, device: M.device, seconds, ...extra }, [g.hu.buffer, res.labels.buffer, res.mask.buffer]);
+    warnings: res.warnings, info, device: M.device, seconds, ...raw, ...extra }, [g.hu.buffer, res.labels.buffer, res.mask.buffer, ...(data.wantRaw ? [res.raw.buffer] : [])]);
   return M.device;
 }
 
