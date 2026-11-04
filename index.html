@@ -109,6 +109,8 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 .ref-item a:hover { text-decoration:underline; }
 
 /* Export bar */
+.btn-rx { background:#00205b; color:#fff; }
+#researchHost { margin:-0.5rem 0 1rem; }
 .export-bar { display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; padding:1rem; background:var(--card); border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.08); margin:1rem 0; }
 .export-btn { padding:0.5rem 1.25rem; border:none; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:0.4rem; transition:all 0.2s; }
 .export-btn:hover { transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,0.15); }
@@ -128,7 +130,7 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 /* Print styles */
 @media print {
   .header { position:relative; }
-  .export-bar, .lightbox { display:none !important; }
+  .export-bar, .lightbox, #researchHost { display:none !important; }
   .card { break-inside:avoid; }
 }
 
@@ -168,16 +170,19 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <button class="tab-btn" onclick="showTab('sahswin')">SAH Swin UNETR (AI)</button>
   <button class="tab-btn" onclick="showTab('rhuh')">RHUH Dataset</button>
   <button class="tab-btn" onclick="showTab('mm')">SAHVAI-MM</button>
+  <button class="tab-btn" onclick="showTab('research')">&#x1f52c; Research Dataset</button>
   <button class="tab-link" type="button" onclick="copyTabLink(this)" title="Copy a link that opens this tab">&#128279; Copy link to this tab</button>
 </div>
 
-<!-- EXPORT BAR -->
+<!-- EXPORT BAR (the research export box opens below it) -->
 <div class="export-bar">
   <button class="export-btn btn-md" onclick="exportMarkdown()">&#x1f4dd; Export Markdown</button>
   <button class="export-btn btn-txt" onclick="exportText()">&#x1f4c4; Export Text</button>
   <button class="export-btn btn-pdf" onclick="exportPDF()">&#x1f4d5; Export PDF</button>
   <button class="export-btn btn-png" onclick="exportPNG()">&#x1f5bc; Export PNG</button>
+  <button class="export-btn btn-rx" onclick="toggleResearch()" title="Add these ABC/2 measurements to your site's de-identified research dataset">&#x1f52c; Research export</button>
 </div>
+<div id="researchHost" hidden></div>
 
 <!-- ==================== CALCULATOR TAB ==================== -->
 <div id="tab-calculator" class="tab-content active">
@@ -658,6 +663,22 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 
 </div>
 
+<!-- ==================== RESEARCH DATASET TAB ==================== -->
+<div id="tab-research" class="tab-content">
+
+<div class="card" style="background:linear-gradient(135deg,var(--mayo-dark),var(--mayo-blue));color:#fff;text-align:center;padding:1.5rem;">
+  <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;">Research Dataset &mdash; your site's hemorrhage volumetric data</h3>
+  <p style="font-size:0.85rem;opacity:0.9;max-width:860px;margin:0 auto 0.75rem;">Every tool (and the ABC/2 calculator) can add a scan to a de-identified dataset kept in this browser. Review it, add outcomes, and export it for REDCap, NIH ScHARe, Parquet, FHIR, OMOP or Convex. Nothing is uploaded.</p>
+  <a href="sahvai-web/research.html" target="_blank" rel="noopener" style="display:inline-block;background:#fff;color:var(--mayo-blue);font-weight:700;font-size:0.85rem;padding:0.45rem 1.1rem;border-radius:8px;text-decoration:none;">Open full screen &#8599;</a>
+  <p style="font-size:0.72rem;opacity:0.8;margin-top:0.6rem;">Collect and share under your institution's approvals. Research and education use only &mdash; not a medical device.</p>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <iframe id="researchFrame" data-src="sahvai-web/research.html" title="Research Dataset" style="width:100%;height:1400px;border:0;display:block;" loading="lazy"></iframe>
+</div>
+
+</div>
+
 <div id="tab-mm" class="tab-content">
 
 <div class="card" style="background:linear-gradient(135deg,var(--mayo-dark),var(--mayo-blue));color:#fff;text-align:center;padding:1.5rem;">
@@ -1131,7 +1152,7 @@ function showTab(name) {
 const TAB_HASH = { citations: 'publications', web: 'sahvai-web', web3d: 'sahvai-3d', hesigns: 'ich-expansion' };   // tab id -> address name, where friendlier
 const TAB_ALIASES = { publications: 'citations', 'sahvai-web': 'web', sahvai: 'web', brainhemoai: 'web', '3d': 'web3d', 'sahvai-3d': 'web3d', '4d': 'web3d',
   'blast-ct': 'blast', swin: 'sahswin', 'sah-swin-unetr': 'sahswin', valladolid: 'sahswin', expansion: 'hesigns', 'ich-expansion': 'hesigns',
-  'heads-up': 'headsup', detector: 'headsup', graeb: 'ivh', anatomy: 'references', multimodal: 'mm', 'sahvai-mm': 'mm' };
+  'heads-up': 'headsup', detector: 'headsup', dataset: 'research', 'research-dataset': 'research', data: 'research', graeb: 'ivh', anatomy: 'references', multimodal: 'mm', 'sahvai-mm': 'mm' };
 function tabFromHash() {
   let h = decodeURIComponent(location.hash.replace(/^#/, '')).trim().toLowerCase();
   h = TAB_ALIASES[h] || h;
@@ -1192,6 +1213,24 @@ function gatherData() {
   const graeb = document.getElementById('graebTotal').textContent;
 
   return { pid,hosp,ctd,age,gcs,evl,scn,notes, sstv,pmR,pmL,pptv,syR,syL,itv,iphR,iphL,sdhR,sdhL,cist5,total6,esah,graeb };
+}
+
+// ===== RESEARCH EXPORT: the ABC/2 measurements as a de-identified record for the site's dataset (sahvai-web/lib/research.js) =====
+async function toggleResearch() {
+  const host = document.getElementById('researchHost');
+  if (!host.hidden) { host.hidden = true; return; }
+  const RX = await import('./sahvai-web/lib/research.js');
+  const old = host.querySelector('.rx'), prev = old ? old.formValues() : {};
+  host.innerHTML = ''; host.hidden = false;
+  const num = x => { const n = parseFloat(x); return isFinite(n) ? n : null; };
+  const ctx = () => { const d = gatherData(); return { tool: 'abc2', compute: 'manual', inputFormat: 'manual', seconds: null, warnings: [],
+    measurements: { abc2_cisternal_sahv_ml: d.cist5, abc2_iph_ml: d.iphR + d.iphL, abc2_sdh_ml: d.sdhR + d.sdhL, abc2_total_ml: d.total6, mgraeb_score: num(d.graeb), esah_score: isFinite(d.esah) ? d.esah : null },
+    provenance: { compartments_mL: { suprasellar: d.sstv, perimesencephalic_R: d.pmR, perimesencephalic_L: d.pmL, prepontine: d.pptv, sylvian_R: d.syR, sylvian_L: d.syL, interhemispheric: d.itv, IPH_R: d.iphR, IPH_L: d.iphL, SDH_R: d.sdhR, SDH_L: d.sdhL } } }; };
+  const d = gatherData(), v = x => x === '—' ? '' : x;
+  const box = RX.mountResearch(host, ctx, { label: 'ABC/2 (manual)', open: true,
+    prefill: { studyId: prev.studyId ?? v(d.pid), onset: prev.onset, iscode: prev.iscode, clinical: prev.clinical, age_years: v(d.age), gcs_admission: v(d.gcs), scanNumber: v(d.scn) || 1 } });
+  box.querySelector('.meas').textContent = `ABC/2 (manual): cisternal SAHV ${d.cist5.toFixed(1)} mL · IPH ${(d.iphR + d.iphL).toFixed(1)} mL · SDH ${(d.sdhR + d.sdhL).toFixed(1)} mL · total ${d.total6.toFixed(1)} mL · mGraeb ${d.graeb} · eSAH ${isFinite(d.esah) ? d.esah : '—'}`;
+  host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ===== EXPORT: MARKDOWN =====

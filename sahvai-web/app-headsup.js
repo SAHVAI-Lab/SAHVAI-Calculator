@@ -5,6 +5,7 @@ import { niftiGz, toInt16 } from './lib/export.js';
 import { Viewer, save } from './lib/viewer.js';
 import { CLASS_KEYS, CLASS_NAMES, T_DETECT, T_POSSIBLE, MODEL_SPECS } from './lib/headsup.js';
 import { putHandoff, openTarget, TARGETS, ROUTES } from './lib/handoff.js';
+import { mountResearch, publicInfo } from './lib/research.js';
 
 const $ = id => document.getElementById(id);
 const root = $('panel-headsup'), q = s => root.querySelector(s);
@@ -92,7 +93,7 @@ const viewer = new HUViewer(q('.viewerhost'), VCLASSES);
 let worker = null, busy = false, jobId = 0, cur = { name: '', frac: 0 }, started = 0, lastInput = null, R = null;
 function startWorker() {
   if (worker) return;
-  worker = new Worker(new URL('./worker-models.js?v=h3', import.meta.url), { type: 'module' });
+  worker = new Worker(new URL('./worker-models.js?v=h4', import.meta.url), { type: 'module' });
   worker.onmessage = ({ data }) => {
     if (data.type === 'log') { log(data.msg); return; }
     if (data.type === 'ready') { if (!busy) setStage(data.failed ? 'Ready. The model downloads when you run a scan.' : 'Model ready. Drop a scan or try a demo case.', data.failed ? 0 : 1); return; }
@@ -216,6 +217,13 @@ function show(r) {
     `${r.device === 'webgpu' ? 'WebGPU' : 'CPU'}, ${r.seconds.toFixed(0)} s`, '<b>research and education use only, not for clinical decisions</b>',
   ].join(' · ');
   q('.results').hidden = false;
+  // research export (lib/research.js): detection probabilities as a de-identified record for the site's dataset
+  q('.results').querySelectorAll('.rx').forEach(e => e.remove());
+  const P = Object.fromEntries(S.map(s => [s.key, s.max])), meas = { det_any_p: P.any, det_epidural_p: P.EDH, det_intraparenchymal_p: P.IPH, det_intraventricular_p: P.IVH, det_subarachnoid_p: P.SAH, det_subdural_p: P.SDH, det_any_call: any.call.replace(' ', '_') };
+  const rx = { tool: 'headsup', info: r.info, compute: r.device, seconds: r.seconds, warnings: w, inputFormat: lastInput && lastInput.demo ? 'demo' : undefined, measurements: meas,
+    model: `${H.models.map(m => MODEL_SPECS[m].label).join(' + ')}, RSNA 2019 1st-place solution (Wang et al., NeuroImage Clin 2021;32:102785)`,
+    provenance: { thresholds: { detected: T_DETECT, possible: T_POSSIBLE }, brain_window_HU: H.window, models: H.models } };
+  mountResearch(q('.results'), () => rx, { label: 'HEADS-UP' });
   q('.results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -225,7 +233,7 @@ function report(r) {
     disclaimer: 'Research and education use only. Not a medical device and not for diagnosis, triage or treatment decisions.',
     tool: 'HEADS-UP (Hemorrhage Evaluation and Detector System for Underserved Populations), SAHVAI Web',
     models: H.models.map(m => `${MODEL_SPECS[m].label}, RSNA 2019 1st-place solution (Wang et al., NeuroImage Clin 2021;32:102785), fold 0`),
-    created: new Date().toISOString(), input: lastInput ? lastInput.label : null, ...r.info,
+    created: new Date().toISOString(), input: lastInput ? lastInput.label : null, ...publicInfo(r.info),
     brain_window_HU: H.window, thresholds: { detected: T_DETECT, possible: T_POSSIBLE, note: 'provisional; not calibrated on an external cohort' },
     study: Object.fromEntries(H.summary.map(s => [s.key, { probability: r4(s.max), call: s.call, peak_slice: s.slice + 1, slices_above_threshold: s.n_slices, range: s.range && s.range.map(k => k + 1) }])),
     per_slice: Array.from({ length: nz }, (_, k) => ({ slice: k + 1, ...Object.fromEntries(CLASS_KEYS.map((c, j) => [c, r4(H.probs[k * 6 + j])])) })),

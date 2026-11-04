@@ -3,6 +3,8 @@
 // surfaces (lib/mesh.js + three.js), orthogonal reformats and the volume-over-time chart.
 import { filesFromDataTransfer } from './lib/source.js';
 import * as THREE from './vendor/three/three-sahvai.min.js';
+import { mountResearch } from './lib/research.js';
+import { niftiGz } from './lib/export.js';
 
 const $ = id => document.getElementById(id);
 const logEl = $('log'), t0 = performance.now();
@@ -172,6 +174,23 @@ function renderVols() {
     s.surf ? `3D: ${(Object.values(s.surf.layers).reduce((a, l) => a + l.tris, 0) / 1000).toFixed(0)}k triangles in ${s.surf.ms.toFixed(0)} ms` : '',
     '<b>research use only, not for clinical decisions</b>',
   ].filter(Boolean).join(' · ');
+  researchBox(s);
+}
+
+// research export (lib/research.js) for the scan on show; the study ID, onset and clinical values carry over between scans
+let rxScan = null;
+function researchBox(s) {
+  if (rxScan === s.id) return;
+  const host = $('results'), old = host.querySelector('.rx'), prev = old ? old.formValues() : {};
+  if (old) old.remove();
+  rxScan = s.id;
+  const done = order().filter(i => scans[i].status === 'done'), n = done.indexOf(scans.indexOf(s)) + 1, r = s.res, v = r.volumes;
+  const ctx = { tool: 'sahvai_3d', info: r.info, compute: r.device, seconds: r.seconds, warnings: r.warnings, inputFormat: s.kind === 'demo' ? 'demo' : undefined,
+    measurements: { vol_sah_ml: v.SAH, vol_iph_ml: v.IPH, vol_ivh_ml: v.IVH, vol_total_blood_ml: v.total },
+    provenance: { rotation_deg: r.angle, scan_position_in_series: n, date_source: s.dateFrom || null },
+    labelMap: () => niftiGz(r.labels, r.grid, { datatype: 2, description: 'SAHVAI labels: 1=SAH 2=IPH 3=IVH' }) };
+  mountResearch(host, () => ctx, { label: `Scan ${n}${s.date ? ` (${fmtDate(s)})` : ''}`, open: prev.open,
+    prefill: { studyId: prev.studyId, onset: prev.onset, iscode: prev.iscode, clinical: prev.clinical, scanNumber: n || 1, scanTime: s.date || undefined } });
 }
 
 function select(i) {

@@ -67,6 +67,13 @@ export function groupStudies(all) {
   return [...m.values()];
 }
 
+// Metadata for the research export (lib/research.js): kept in info.research, which the JSON reports leave out
+export function researchMeta(s) {
+  const t = Number(nums(s.thickness)[0]), k = Number(nums(s.kvp)[0]), str = x => String(x || '').trim() || null;
+  return { scan_datetime: seriesDate(s), manufacturer: str(s.manufacturer), kvp: k > 0 ? k : null, slice_thickness_mm: t > 0 ? t : null,
+    recon_kernel: str(s.kernel), patient_age: str(s.patient_age), patient_sex: str(s.patient_sex) };
+}
+
 // Date and time of a series as an ISO string (acquisition, else series, else study), or null.
 export function seriesDate(s) {
   const pick = [[s.acq_date, s.acq_time], [s.series_date, s.series_time], [s.study_date, s.study_time]].find(([d]) => /^\d{8}$/.test((d || '').trim()));

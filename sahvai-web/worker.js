@@ -4,7 +4,7 @@
 // Out: {type: 'log'|'progress'|'ready'|'result'|'error'|'scans', ...}
 import * as ort from './vendor/ort/ort.webgpu.min.mjs';
 import { openInput } from './lib/source.js';
-import { pickSeries, seriesVolume, scanSeries, groupStudies, chooseSeries, seriesDate } from './lib/series.js';
+import { pickSeries, seriesVolume, scanSeries, groupStudies, chooseSeries, seriesDate, researchMeta } from './lib/series.js';
 import { niftiVolume } from './lib/nifti.js';
 import { nrrdVolume } from './lib/nrrd.js';
 import { toGrid } from './lib/grid.js';
@@ -178,7 +178,7 @@ async function runMulti(data, t0) {
       } else if (s.kind === 'nifti') { vol = await niftiVolume(s.file, log); info.source = s.name; }
       else if (s.kind === 'nrrd') { vol = await nrrdVolume(s.file, log); info.source = s.name; }
       else {
-        info = { source: 'DICOM', series_description: s.pick.best.desc || '', body_part: s.pick.best.body_part || '', series_selection: s.pick.why };
+        info = { source: 'DICOM', series_description: s.pick.best.desc || '', body_part: s.pick.best.body_part || '', series_selection: s.pick.why, research: researchMeta(s.pick.best) };
         vol = await seriesVolume(s.pick.best.files, log);
       }
       device = await analyseVolume(vol, info, data, ts, device, { index: i, count: scans.length, name: s.name, date: s.date, patientKey: s.patientKey }, pre);
@@ -224,7 +224,7 @@ self.onmessage = async ({ data }) => {
       else if (inp.kind === 'nrrd') { vol = await nrrdVolume(inp.file, log); info.source = inp.name; }
       else {
         const pick = await pickSeries(inp.entries, log);
-        info = { source: 'DICOM', series_description: pick.best.desc || '', body_part: pick.best.body_part || '', series_selection: pick.why, series_in_upload: pick.list };
+        info = { source: 'DICOM', series_description: pick.best.desc || '', body_part: pick.best.body_part || '', series_selection: pick.why, series_in_upload: pick.list, research: researchMeta(pick.best) };
         vol = await seriesVolume(pick.best.files, log);
       }
     }

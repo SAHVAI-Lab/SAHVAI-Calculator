@@ -18,7 +18,8 @@ Version 2.1 · 25 October 2026 (four pages: SAHVAI / BrainHemoAI, CLAIM, BLAST-C
 | `models/headsup/` | HEADS-UP: DenseNet121 (14.3 MB), DenseNet169 (25.6 MB) and SE-ResNeXt101 (93.8 MB, two parts), float16-stored; RSNA 2019 1st-place weights, non-commercial |
 | `headsup.html`, `app-headsup.js`, `lib/headsup.js`, `lib/handoff.js` | the HEADS-UP detector page and the hand-off of a scan to the segmentation pages (IndexedDB, same origin) |
 | `models/deepbleed/` | DeepBleed: the V-Net in two parts (90.2 MB, float32, unchanged weights; CC BY-NC 4.0 with Dr Sharrock's permission) and its 1.5 mm CT template |
-| `vendor/` | ONNX Runtime Web 1.30 and DICOM image codecs (all local) |
+| `vendor/` | ONNX Runtime Web 1.30, DICOM image codecs, three.js, hyparquet-writer (all local) |
+| `research.html`, `app-research.js`, `lib/research.js` | research exports and the Research Dataset page (records kept in the browser's IndexedDB) |
 | `coi-serviceworker.js` | enables multi-threading when the server cannot send the headers below |
 | `demo/` | public demo cases: BrainHemoAI `head.nrrd`, three BHSD cases from the CLAIM repository with labels, BLAST-CT `scan_0` with labels, one MISTIE/CLEAR ICH scan (JHU, CC BY-NC 4.0) |
 | `licenses/` | full licence texts for BLAST-CT (Apache-2.0) and CLAIM (CC BY-NC 4.0) |

@@ -4,6 +4,7 @@ import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
 import { Viewer, save } from './lib/viewer.js';
 import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
+import { mountResearch, publicInfo } from './lib/research.js';
 
 const $ = id => document.getElementById(id);
 const logEl = $('log'), t0 = performance.now();
@@ -65,6 +66,19 @@ function volumesFor(model, r) {
   return cards;
 }
 
+// research export: the model's volumes in the shared dataset columns (lib/research.js)
+function researchMeasures(model, r) {
+  const v = r.volumes || {}, m = {}, sum = ks => ks.reduce((a, k) => a + (v[k] || 0), 0);
+  if (model === 'sahvai') Object.assign(m, { vol_sah_ml: v.SAH, vol_iph_ml: v.IPH, vol_ivh_ml: v.IVH, vol_total_blood_ml: v.total ?? sum(['SAH', 'IPH', 'IVH']) });
+  if (model === 'claim') Object.assign(m, { vol_sah_ml: v.SAH, vol_ivh_ml: v.IVH, vol_iph_ml: v.ICH, vol_sdh_ml: v.SDH, vol_ventricles_ml: v.Ventricles, vol_aneurysm_ml: v.Aneurysm, vol_total_blood_ml: sum(['SAH', 'IVH', 'ICH', 'SDH']) });
+  if (model === 'blast') Object.assign(m, { vol_iph_ml: v.IPH, vol_eah_ml: v.EAH, vol_oedema_ml: v.Oedema, vol_ivh_ml: v.IVH, vol_total_blood_ml: sum(['IPH', 'EAH', 'IVH']) });
+  if (model === 'deepbleed') Object.assign(m, { vol_ich_ivh_ml: v.ICH, vol_total_blood_ml: v.ICH });
+  if (model === 'sahswin') Object.assign(m, { vol_total_blood_ml: v.SAH, vol_template_space_ml: r.template_mL });
+  if ((model === 'deepbleed' || model === 'sahswin') && r.mask) { let b = 0; for (let i = 0; i < r.mask.length; i++) b += r.mask[i]; m.vol_brain_ml = b * r.grid.sp[0] * r.grid.sp[1] * r.grid.sp[2] / 1000; }
+  if (r.comparison) { m.ref_blood_ml = r.comparison.blood.reference_mL; m.ref_dice_blood = r.comparison.blood.dice; }
+  return m;
+}
+
 // ---------- worker ----------
 let worker = null, jobId = 0, active = null, busy = false;
 const panels = {};
@@ -113,11 +127,12 @@ class Panel {
   }
   opts() { return this.getOpts ? this.getOpts(this.root) : {}; }
   runFiles(files) {
-    files = [...files]; if (!files.length) return;
+    files = [...files]; if (!files.length) return; this.wasDemo = false;
     const label = `${files.length} file(s): ${files.slice(0, 3).map(f => f.webkitRelativePath || f.name).join(', ')}${files.length > 3 ? ', …' : ''}`;
     if (submit(this, { model: this.model, files, gt: this.gtFile || null, opts: this.opts(), label })) this.begin();
   }
   runDemo(d) {
+    this.wasDemo = true;
     if (submit(this, { model: this.model, demo: d.url, demoName: d.name, gt: d.gt || null, gtScheme: d.gtScheme, opts: this.opts(), label: `demo case: ${d.name}` })) this.begin();
   }
   begin() { this.status.hidden = false; this.results.hidden = true; this.q('.drop').classList.add('busy'); this.setStage('Starting', 0); }
@@ -154,7 +169,18 @@ class Panel {
     dl.querySelector('[data-k=ct]').onclick = async () => save(await niftiGz(toInt16(g.hu), g, { datatype: 4, description: `${pre} model grid (HU)` }), `${pre}-ct.nii.gz`);
     dl.querySelector('[data-k=png]').onclick = () => this.viewer.png(`${pre}-slice-${this.viewer.z + 1}.png`);
     dl.querySelector('[data-k=json]').onclick = () => save(new Blob([JSON.stringify(this.report(r), null, 2)], { type: 'application/json' }), `${pre}-report.json`);
+    this.mountResearch(r);
     this.root.querySelector('.results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // research export: this run's measurements as a de-identified record for the site's dataset (lib/research.js)
+  mountResearch(r) {
+    const host = this.q('.results'); host.querySelectorAll('.rx').forEach(e => e.remove());
+    const g = r.grid, legend = Object.entries(CLASSES[this.model]).map(([k, c]) => `${k}=${c.key}`).join(' '), pre = this.prefix;
+    const ctx = { tool: this.model, info: r.info, compute: r.device, seconds: r.seconds, warnings: r.warnings, demo: !!this.wasDemo,
+      measurements: researchMeasures(this.model, r), provenance: this.report ? (({ per_slice_mL, ...x }) => x)(this.report(r)) : {},
+      labelMap: () => niftiGz(r.labels, g, { datatype: 2, description: `${pre} labels: ${legend}`.slice(0, 79) }) };
+    if (ctx.demo) ctx.inputFormat = 'demo';
+    mountResearch(host, () => ctx, { label: CONFIG[this.model] ? CONFIG[this.model].title : this.model });
   }
   detail(r) { return this.details ? this.details(r) : []; }
   report(r) {
@@ -167,7 +193,7 @@ class Panel {
     return {
       disclaimer: 'Research and education use only. Not a medical device and not for diagnosis or treatment decisions.',
       model: MODEL_NAME[this.model], app: 'SAHVAI Web (sahvai-lab.github.io/SAHVAI-Calculator/sahvai-web/), ONNX Runtime Web',
-      created: new Date().toISOString(), ...r.info, labels: Object.fromEntries(Object.entries(cl).map(([k, c]) => [k, c.key])),
+      created: new Date().toISOString(), ...publicInfo(r.info), labels: Object.fromEntries(Object.entries(cl).map(([k, c]) => [k, c.key])),
       volumes_mL: Object.fromEntries(Object.entries(r.volumes).filter(([k, v]) => typeof v === 'number' && k !== 'voxel_mL').map(([k, v]) => [k, r3(v)])), voxel_mL: vox,
       ...(this.extra ? this.extra(r) : {}), comparison_with_reference: r.comparison ? { file: r.gtName, ...r.comparison } : undefined,
       per_slice_mL: per, warnings: r.warnings, device: r.device, seconds: r3(r.seconds),
@@ -269,11 +295,13 @@ class DatasetPanel extends Panel {
   }
   modelOpts() { return this.model === 'claim' ? { mode: 'exact', mirror: false } : this.model === 'blast' ? { ensemble: false } : this.model === 'sahswin' ? {} : { angle: null }; }
   runDemo(d) {   // a hosted RHUH case with its expert mask, through the chosen model
+    this.wasDemo = true;
     this.setModel(this.q('select.model').value);
     if (submit(this, { model: this.model, demo: d.url, demoName: d.name, gt: d.gt, gtScheme: 'binary', opts: this.modelOpts(), label: `${d.name} with ${this.model}` })) this.begin();
   }
   go() {
     if (!this.ct) { this.setStage('Choose or drop the case CT first.', 0); return; }
+    this.wasDemo = false;
     this.setModel(this.q('select.model').value);
     const opts = this.modelOpts();
     if (submit(this, { model: this.model, files: [this.ct], gt: this.mask, gtScheme: 'binary', opts, label: `RHUH case ${this.ct.name}${this.mask ? ` + ${this.mask.name}` : ''} with ${this.model}` })) this.begin();

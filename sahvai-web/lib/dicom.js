@@ -19,6 +19,8 @@ export const SELECT_TAGS = {
   // sahvai-web 3D-4D: study grouping and scan dates for serial CTs (the patient ID is only compared, never shown)
   0x0020000D: 'study_uid', 0x00080020: 'study_date', 0x00080021: 'series_date', 0x00080022: 'acq_date',
   0x00080030: 'study_time', 0x00080031: 'series_time', 0x00080032: 'acq_time', 0x00100020: 'patient_id',
+  // research exports: scanner details, and age and sex to pre-fill the (optional) clinical fields; never shown or put in reports
+  0x00080070: 'manufacturer', 0x00180060: 'kvp', 0x00101010: 'patient_age', 0x00100040: 'patient_sex',
 };
 // Tags needed to place and decode a slice. All sit before the pixel data.
 export const SLICE_TAGS = {

@@ -4,7 +4,7 @@
 // Out: {type: 'log'|'progress'|'ready'|'result'|'error', id, model, ...}
 import * as ort from './vendor/ort/ort.webgpu.min.mjs';
 import { openInput } from './lib/source.js';
-import { pickSeries, seriesVolume } from './lib/series.js';
+import { pickSeries, seriesVolume, researchMeta } from './lib/series.js';
 import { niftiVolume } from './lib/nifti.js';
 import { nrrdVolume } from './lib/nrrd.js';
 import { toGrid } from './lib/grid.js';
@@ -140,7 +140,7 @@ async function readVolume(data) {
     else if (inp.kind === 'nrrd') { vol = await nrrdVolume(inp.file, log); info.source = inp.name; }
     else {
       const pick = await pickSeries(inp.entries, log);
-      info = { source: 'DICOM', series_description: pick.best.desc || '', body_part: pick.best.body_part || '', series_selection: pick.why, series_in_upload: pick.list };
+      info = { source: 'DICOM', series_description: pick.best.desc || '', body_part: pick.best.body_part || '', series_selection: pick.why, series_in_upload: pick.list, research: researchMeta(pick.best) };
       vol = await seriesVolume(pick.best.files, log);
       if (vol.window) info.dicom_window = vol.window;
     }

@@ -81,4 +81,4 @@ The networks were trained on the **RSNA Brain CT Hemorrhage Dataset** (Copyright
 
 ## Bundled libraries (`vendor/`)
 
-ONNX Runtime Web (MIT), jpeg-lossless-decoder-js (MIT), Cornerstone codecs CharLS / OpenJPEG / OpenJPH (MIT), coi-serviceworker (MIT), three.js (MIT; 3D-4D page). See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+ONNX Runtime Web (MIT), jpeg-lossless-decoder-js (MIT), Cornerstone codecs CharLS / OpenJPEG / OpenJPH (MIT), coi-serviceworker (MIT), three.js (MIT; 3D-4D page), hyparquet-writer and hyparquet (MIT; Parquet export of the Research Dataset). See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

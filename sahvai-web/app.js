@@ -1,10 +1,11 @@
 import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
 import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
+import { mountResearch, publicInfo } from './lib/research.js';
 
 const $ = id => document.getElementById(id);
 const logEl = $('log'), t0 = performance.now();
-let worker = null, busy = false, runStart = 0, cur = { name: '', frac: 0 }, R = null, z = 0;
+let worker = null, busy = false, runStart = 0, cur = { name: '', frac: 0 }, R = null, z = 0, wasDemo = false;
 const COLORS = { 1: [255, 176, 0], 2: [255, 45, 120], 3: [30, 200, 255] };
 const NAMES = { 1: 'SAH', 2: 'IPH', 3: 'IVH' };
 
@@ -46,10 +47,11 @@ function begin(msg) {
 function run(files) {
   files = [...files];
   if (!files.length || busy) return;
+  wasDemo = false;
   begin(`${files.length} file(s): ${files.slice(0, 3).map(f => f.webkitRelativePath || f.name).join(', ')}${files.length > 3 ? ', …' : ''}`);
   worker.postMessage({ files, device: device(), angle: angle() });
 }
-$('demo').onclick = () => { if (busy) return; begin('demo case: BrainHemoAI head.nrrd (aneurysmal SAH)'); worker.postMessage({ demo: 'demo/brainhemoai-demo-head.nrrd', device: device(), angle: angle() }); };
+$('demo').onclick = () => { if (busy) return; wasDemo = true; begin('demo case: BrainHemoAI head.nrrd (aneurysmal SAH)'); worker.postMessage({ demo: 'demo/brainhemoai-demo-head.nrrd', device: device(), angle: angle() }); };
 function done() { busy = false; $('drop').classList.remove('busy'); }
 
 function setStage(name, frac) { cur = { name, frac }; $('stage').textContent = name; $('bar').style.width = `${Math.round(frac * 100)}%`; showPct(); }
@@ -97,6 +99,13 @@ function show(r) {
     '<b>research use only, not for clinical decisions</b>',
   ].join(' · ');
   $('results').hidden = false;
+  // research export (lib/research.js): this scan's volumes as a de-identified record for the site's dataset
+  $('results').querySelectorAll('.rx').forEach(e => e.remove());
+  const rx = { tool: 'sahvai', info: r.info, compute: r.device, seconds: r.seconds, warnings: r.warnings, inputFormat: wasDemo ? 'demo' : undefined,
+    measurements: { vol_sah_ml: v.SAH, vol_iph_ml: v.IPH, vol_ivh_ml: v.IVH, vol_total_blood_ml: v.total },
+    provenance: { rotation_deg: r.angle, slices_analysed: [r.slices[0] + 1, r.slices[1] + 1], windows: r.windows.map(k => k + 1) },
+    labelMap: () => niftiGz(r.labels, g, { datatype: 2, description: 'SAHVAI labels: 1=SAH 2=IPH 3=IVH' }) };
+  mountResearch($('results'), () => rx, { label: 'SAHVAI (BrainHemoAI)' });
   const cv = $('view'); cv.width = g.nx; cv.height = g.ny; cv.style.aspectRatio = `${g.nx * g.sp[0]} / ${g.ny * g.sp[1]}`;
   $('slice').max = g.nz - 1;
   let best = Math.floor(g.nz / 2), bv = 0;
@@ -164,7 +173,7 @@ $('dlJSON').onclick = () => {
   const report = {
     disclaimer: 'Research use only. Not a medical device and not for diagnosis or treatment decisions.',
     model: 'Hybrid 2D/3D UNet (Hu et al., NeuroImage 2023;279:120321), BrainHemoAI weights, run with ONNX Runtime Web',
-    created: new Date().toISOString(), ...R.info,
+    created: new Date().toISOString(), ...publicInfo(R.info),
     volumes_mL: { SAH: r2(R.volumes.SAH), IPH: r2(R.volumes.IPH), IVH: r2(R.volumes.IVH), total: r2(R.volumes.total) },
     voxel_mL: R.vox, rotation_deg: R.angle, slices_analysed: [R.slices[0] + 1, R.slices[1] + 1], windows: R.windows.map(k => k + 1),
     per_slice_mL: R.per.map((c, k) => ({ slice: k + 1, SAH: r2(c[1] * R.vox), IPH: r2(c[2] * R.vox), IVH: r2(c[3] * R.vox) })),

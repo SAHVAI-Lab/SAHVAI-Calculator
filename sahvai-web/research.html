@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Dataset · SAHVAI Lab &amp; HEADS-UP</title>
+<meta name="description" content="Your site's de-identified hemorrhage volumetric research dataset, built from the SAHVAI Lab and HEADS-UP tools and exported for REDCap, NIH ScHARe, Parquet, FHIR, OMOP or Convex. Kept in this browser.">
+<link rel="stylesheet" href="style-models.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23003da5%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%278%27 fill=%27none%27 stroke=%27%23ffb000%27 stroke-width=%274%27/%3E%3C/svg%3E">
+<style>
+.rs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 4px; }
+.stat { background: #f6f9ff; border: 1px solid #c9d6ee; border-radius: 12px; padding: 8px 12px; }
+.stat .k { font-size: .74rem; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 700; }
+.stat .v { font-size: 1.5rem; font-weight: 800; color: var(--mayo-dark); }
+.stat .s { font-size: .76rem; color: var(--muted); }
+.form { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; font-size: .86rem; }
+.form label { display: flex; flex-direction: column; gap: 2px; font-size: .76rem; font-weight: 600; color: #3a4250; }
+.form input, .form select { font: inherit; font-size: .86rem; padding: 4px 7px; border: 1px solid #c3cad6; border-radius: 6px; }
+.mono { font-family: ui-monospace, Menlo, monospace; }
+.key { width: 22rem; max-width: 100%; }
+.tablewrap { overflow: auto; max-height: 560px; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
+table.ds { border-collapse: collapse; font-size: .8rem; width: 100%; min-width: 980px; }
+table.ds th, table.ds td { padding: 4px 8px; border-bottom: 1px solid #e6ebf3; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.ds th { position: sticky; top: 0; background: #eef2f9; color: var(--mayo-dark); font-size: .74rem; z-index: 1; }
+table.ds td.l, table.ds th.l { text-align: left; }
+table.ds select { font: inherit; font-size: .78rem; padding: 1px 3px; border: 1px solid #c3cad6; border-radius: 5px; }
+table.ds tr:hover td { background: #fafcff; }
+.del { border: 0; background: none; color: #a3001b; cursor: pointer; font-size: .9rem; }
+.dlgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+.dl { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: #fff; }
+.dl h3 { margin: 0 0 4px; font-size: .92rem; color: var(--mayo-dark); }
+.dl p { margin: 0 0 8px; font-size: .8rem; color: #3a4250; }
+.dl .buttons { justify-content: flex-start; gap: 6px; }
+.empty { color: var(--muted); padding: 14px; text-align: center; }
+.msg { font-weight: 600; color: #1e6b34; font-size: .85rem; }
+.msg.err { color: #a3001b; }
+details.howto { border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; margin: 6px 0; background: #fff; font-size: .85rem; }
+details.howto summary { cursor: pointer; font-weight: 700; color: var(--mayo-blue); }
+details.howto pre { background: #f3f5f9; padding: 8px 10px; border-radius: 8px; overflow: auto; font-size: .78rem; }
+.danger { background: #fff; color: #a3001b; border-color: #a3001b; }
+.danger:hover { background: #fff1f3; }
+</style>
+</head>
+<body data-page="research">
+<header class="top">
+  <div class="wrap">
+    <h1>Research Dataset <span>for your site</span></h1>
+    <p>Every tool on this site can add a scan to a de-identified hemorrhage volumetric dataset that stays in this browser. Review it here, add outcomes when they are known, and export it for REDCap, NIH ScHARe, Parquet, FHIR, OMOP or Convex.</p>
+    <nav class="jump" aria-label="SAHVAI Web tools"><a href="index.html">SAHVAI (BrainHemoAI)</a><a href="claim.html">CLAIM aSAH</a><a href="blast.html">BLAST-CT</a><a href="deepbleed.html">DeepBleed ICH</a><a href="sahswin.html">SAH Swin UNETR</a><a href="rhuh.html">RHUH dataset</a><a href="research.html" aria-current="page">Research Dataset</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="notice" aria-label="About this dataset">
+    <div class="note warn">
+      <h2>Your site's data, under your site's approvals</h2>
+      <p>Collect and share these data only under your institution's approvals (IRB or ethics committee, data use agreements). Research and education use only; AI volumes are not validated for clinical decisions.</p>
+    </div>
+    <div class="note">
+      <h2>Stays on this computer</h2>
+      <p>Records live in this browser (IndexedDB) for this site only; nothing is uploaded. Clearing the browser's site data deletes them, so <b>download a backup regularly</b>. Each browser and computer has its own dataset; merge them with Import.</p>
+    </div>
+    <div class="note">
+      <h2>De-identified by design</h2>
+      <ul>
+        <li>Study IDs become pseudonyms with your site key.</li>
+        <li>Dates become hours from onset; age is capped at 90.</li>
+        <li>No images, names, MRNs or free text.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-site">
+    <header class="phead"><span class="num">1</span><div><h2 id="h-site">Site settings</h2><p class="sub">Used by every tool. Use the <b>same site key on every computer</b> at your site, so the same study ID always gives the same pseudonym and serial scans link up.</p></div></header>
+    <div class="form">
+      <label>Site code<input id="siteId" maxlength="12" placeholder="e.g. MCF" style="width:7rem"></label>
+      <label>Country (ISO code)<input id="country" maxlength="2" placeholder="US" style="width:4.5rem"></label>
+      <label>Site key (keep private, like a password)<input id="siteKey" class="mono key" type="password" autocomplete="off" spellcheck="false"></label>
+      <button class="btn small ghost" id="showKey" type="button">Show</button>
+      <button class="btn small ghost" id="copyKey" type="button">Copy</button>
+      <button class="btn small ghost" id="saveKey" type="button">Use this key</button>
+      <span class="msg" id="siteMsg"></span>
+    </div>
+    <div class="form" style="margin-top:10px">
+      <label>Look up a pseudonym (nothing is stored)<input id="lookId" placeholder="study ID" style="width:12rem" autocomplete="off"></label>
+      <span class="mono" id="lookOut" style="padding-bottom:5px">—</span>
+    </div>
+    <p class="small">The key was made at random in this browser. Changing it changes every new pseudonym; records already stored keep theirs. Keep a copy of the key in your site's secure records, separate from the data, and do not send it with the exports.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-data">
+    <header class="phead"><span class="num">2</span><div><h2 id="h-data">The dataset</h2><p class="sub">One row per scan and tool. Outcomes can be entered here when known; everything else comes from the tools.</p></div></header>
+    <div class="rs-grid" id="stats"></div>
+    <div class="form" style="margin-top:8px">
+      <label>Show tool<select id="filterTool"><option value="">all tools</option></select></label>
+      <span class="small" id="shown"></span>
+    </div>
+    <div class="tablewrap"><table class="ds" id="table"></table></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-export">
+    <header class="phead"><span class="num">3</span><div><h2 id="h-export">Export</h2><p class="sub">The whole dataset (or the tool shown above). Every format uses the same variables, described in the data dictionary.</p></div></header>
+    <div class="dlgrid">
+      <div class="dl"><h3>Everything (.zip)</h3><p>CSV, Parquet, data dictionary, REDCap files, FHIR, OMOP, JSON Lines and a README.</p><div class="buttons"><button class="btn small" data-x="all">Download all formats</button></div></div>
+      <div class="dl"><h3>CSV + data dictionary</h3><p>For NIH ScHARe (Repository upload, mapped to common data elements), R, Python, Stata or Excel.</p><div class="buttons"><button class="btn small" data-x="csv">Dataset (.csv)</button><button class="btn small ghost" data-x="dict">Dictionary (.csv)</button></div></div>
+      <div class="dl"><h3>REDCap</h3><p>Create a project from the data dictionary, then import the records.</p><div class="buttons"><button class="btn small" data-x="redcapDict">Data dictionary</button><button class="btn small ghost" data-x="redcapData">Records to import</button></div></div>
+      <div class="dl"><h3>Parquet</h3><p>Typed columnar file for ScHARe/Terra (BigQuery), pandas, Arrow, DuckDB or Spark.</p><div class="buttons"><button class="btn small" data-x="parquet">Dataset (.parquet)</button></div></div>
+      <div class="dl"><h3>FHIR R4 and OMOP</h3><p>FHIR Observations for EHR-side systems; OMOP-style MEASUREMENT rows for OHDSI networks (map concept ids at your site).</p><div class="buttons"><button class="btn small" data-x="fhir">FHIR bundle (.json)</button><button class="btn small ghost" data-x="omop">OMOP rows (.csv)</button></div></div>
+      <div class="dl"><h3>JSON Lines and backup</h3><p>JSON Lines for a Convex table or other databases; the backup restores this dataset in another browser.</p><div class="buttons"><button class="btn small" data-x="jsonl">JSON Lines</button><button class="btn small ghost" data-x="backup">Backup (.json)</button></div></div>
+    </div>
+    <p class="msg" id="exMsg"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-import">
+    <header class="phead"><span class="num">4</span><div><h2 id="h-import">Import, merge and clear</h2><p class="sub">Merge a backup, a dataset CSV or JSON Lines from another computer at your site. Records with the same record ID are replaced.</p></div></header>
+    <div class="buttons" style="justify-content:flex-start">
+      <label class="btn small">Import file<input type="file" id="importFile" accept=".json,.jsonl,.csv"></label>
+      <button class="btn small ghost danger" id="clearAll" type="button">Clear the dataset…</button>
+      <span class="msg" id="imMsg"></span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-how">
+    <header class="phead"><span class="num">?</span><div><h2 id="h-how">Using the exports</h2></div></header>
+    <details class="howto"><summary>REDCap</summary>
+      <p>In REDCap: <i>New project → Upload a REDCap Data Dictionary</i> and choose <code>redcap_data_dictionary.csv</code> (forms: scan record, hemorrhage volumes, clinical, outcomes). Then <i>Data Import Tool</i> → upload <code>redcap_records.csv</code>. One REDCap record is one scan; <code>subject_id</code> links serial scans of a subject. Leave the <i>Identifier</i> settings off: there are no direct identifiers.</p></details>
+    <details class="howto"><summary>NIH ScHARe (NIMHD, Terra on Google Cloud)</summary>
+      <p>Upload <code>dataset.csv</code> or <code>dataset.parquet</code> with <code>data_dictionary.csv</code> to a private or controlled collection in the ScHARe Repository and map the variables to common data elements (the dictionary gives each one's NINDS CDE concept), or bring the Parquet file into a Terra workspace. ScHARe's focus on health disparities and AI bias suits comparisons across countries and sites; release beyond your collection follows its review.</p></details>
+    <details class="howto"><summary>Convex</summary>
+      <p>Import the JSON Lines file as a table, then query it from a Convex app (for example a consortium dashboard). Keep it de-identified, and check Convex's business associate agreement and hosting region against your approvals (LGPD and GDPR as well as HIPAA).</p><pre>npx convex import --table hemorrhage_scans dataset.jsonl</pre></details>
+    <details class="howto"><summary>Python and R</summary>
+      <pre>import pandas as pd
+df = pd.read_parquet("dataset.parquet")      # or pd.read_csv("dataset.csv")
+df.groupby("tool")[["vol_sah_ml", "vol_iph_ml", "vol_ivh_ml"]].describe()</pre>
+      <pre>df &lt;- arrow::read_parquet("dataset.parquet")   # or read.csv("dataset.csv")</pre></details>
+    <details class="howto"><summary>Federated and secure environments (e.g. Mayo Clinic Platform)</summary>
+      <p>The tools already work in a federated way: each site runs them on its own computers and keeps its own dataset; only the exports you choose leave. A consortium can pool de-identified exports, or keep data at each site and share only summaries. For work inside a secure platform such as Mayo Clinic Platform (data kept behind each partner's walls), the same models can run as containers inside the platform. Check each model's licence: CLAIM, DeepBleed and the Valladolid model are non-commercial.</p></details>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p><b>Research and education use only. Not a medical device.</b> The dataset is kept in this browser and is never uploaded.</p>
+  <p>Variables follow the NINDS common data elements for SAH where one exists: Suarez JI, et al. Common Data Elements for Unruptured Intracranial Aneurysms and Subarachnoid Hemorrhage Clinical Research. <i>Neurocrit Care</i> 2019;30(Suppl 1):4–19. <a href="https://doi.org/10.1007/s12028-019-00723-6">doi:10.1007/s12028-019-00723-6</a>. Parquet files are written with <a href="https://github.com/hyparam/hyparquet-writer">hyparquet-writer</a> (MIT).</p>
+  <p>Part of the <a href="../">SAHVAI Calculator</a> · SAHVAI Lab &amp; HEADS-UP (CODE ICH) Hemorrhage Tools.</p>
+</footer>
+<script type="module" src="app-research.js"></script>
+</body>
+</html>

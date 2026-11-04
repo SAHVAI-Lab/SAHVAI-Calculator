@@ -3,6 +3,7 @@ import { filesFromDataTransfer } from './lib/source.js';
 import { niftiGz, toInt16 } from './lib/export.js';
 import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
 import { Viewer, save } from './lib/viewer.js';
+import { mountResearch, publicInfo } from './lib/research.js';
 import { analyseSigns, deepmedxROI, batScore, brainScore, expansion, NEW_IVH_mL, OVERLAY, SIGN_INFO, CRITERIA } from './lib/hesigns.js';
 
 const $ = id => document.getElementById(id), q = s => document.querySelector(s);
@@ -215,6 +216,17 @@ function show() {
     `rotation ${res.angle}°`, `${res.device === 'webgpu' ? 'WebGPU' : 'CPU'}, ${res.seconds.toFixed(0)} s`, '<b>research and education use only</b>',
   ].join(' · ');
   q('.results').hidden = false;
+  // research export (lib/research.js): volumes, signs (reader overrides included) and scores, read when the button is pressed
+  q('.results').querySelectorAll('.rx').forEach(e => e.remove());
+  mountResearch(q('.results'), () => {
+    if (!R) return null;
+    const rp = report(), sc = rp.scores || {}, used = SIGN_ORDER.filter(k => eff(k) === true);
+    return { tool: 'hesigns', info: R.res.info, compute: R.res.device, seconds: R.res.seconds, warnings: [...(R.res.warnings || []), ...(R.S.warnings || [])], inputFormat: /^demo case/.test(lastLabel) ? 'demo' : undefined,
+      measurements: { vol_sah_ml: R.res.volumes.SAH, vol_iph_ml: R.res.volumes.IPH, vol_ivh_ml: R.res.volumes.IVH, vol_total_blood_ml: R.res.volumes.total ?? (R.res.volumes.SAH + R.res.volumes.IPH + R.res.volumes.IVH),
+        he_hematoma_ml: R.S.volumes ? R.S.volumes.main : null, he_signs_present: used.join(';') || null, he_bat_score: sc.BAT ? sc.BAT.score : null, he_brain_score: sc.BRAIN ? sc.BRAIN.score : null, he_yale_p: rp.yale_model ? rp.yale_model.p : null },
+      provenance: { hematoma_definition: rp.hematoma_definition, status: rp.status, signs: Object.fromEntries(Object.entries(rp.signs).map(([k, s]) => [k, { auto: s.auto, reader: s.reader, used: s.used }])), scores: rp.scores, yale_model: rp.yale_model },
+      labelMap: () => niftiGz(R.res.labels, R.g, { datatype: 2, description: 'SAHVAI labels: 1=SAH 2=IPH 3=IVH' }) };
+  }, { label: 'ICH expansion signs' });
   q('.results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -298,7 +310,7 @@ function report() {
   const { S, res, roi } = R, h = hoursVal();
   return {
     disclaimer: 'Research and education use only. Not a medical device. Signs are rule-based candidates on an AI segmentation; a reader must confirm them.',
-    tool: 'ICH expansion signs, SAHVAI Web', created: new Date().toISOString(), input: lastLabel, ...res.info,
+    tool: 'ICH expansion signs, SAHVAI Web', created: new Date().toISOString(), input: lastLabel, ...publicInfo(res.info),
     segmentation: { model: 'SAHVAI (BrainHemoAI Hybrid 2D/3D UNet)', volumes_mL: { SAH: r1(res.volumes.SAH), IPH: r1(res.volumes.IPH), IVH: r1(res.volumes.IVH) } },
     hematoma_definition: includeIVH() ? 'largest 26-connected IPH+IVH component' : 'largest 26-connected IPH component',
     status: S.status, contrast: S.contrast, hematoma: S.hematoma && { ...S.hematoma, box: undefined, maxSlice: S.hematoma.maxSlice + 1 },

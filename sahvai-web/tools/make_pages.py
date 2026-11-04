@@ -189,7 +189,7 @@ PAGES = [
    'Open non-contrast CT scans of aneurysmal SAH with expert bleeding masks from Río Hortega University Hospital, Valladolid (Cepeda &amp; García-García, Zenodo 2023). Load a case and its mask, run SAHVAI (BrainHemoAI), CLAIM, BLAST-CT or the Valladolid SAH Swin UNETR on it and compare with the expert. Everything runs on this computer.', p4,
    'We thank Dr Santiago Cepeda and Dr Sergio García-García for the RHUH dataset (<a href="LICENSE.md#rhuh-dataset">CC BY 4.0</a>), and the BrainHemoAI, CLAIM, BLAST-CT and Valladolid groups for the models it can be compared with.'),
 ]
-NAV = [('headsup.html', 'HEADS-UP detector'), ('index.html', 'SAHVAI (BrainHemoAI)'), ('claim.html', 'CLAIM aSAH'), ('blast.html', 'BLAST-CT'), ('deepbleed.html', 'DeepBleed ICH'), ('hesigns.html', 'ICH expansion signs'), ('sahswin.html', 'SAH Swin UNETR'), ('rhuh.html', 'RHUH dataset')]
+NAV = [('headsup.html', 'HEADS-UP detector'), ('index.html', 'SAHVAI (BrainHemoAI)'), ('claim.html', 'CLAIM aSAH'), ('blast.html', 'BLAST-CT'), ('deepbleed.html', 'DeepBleed ICH'), ('hesigns.html', 'ICH expansion signs'), ('sahswin.html', 'SAH Swin UNETR'), ('rhuh.html', 'RHUH dataset'), ('research.html', 'Research Dataset')]
 for pid, fname, title, h1, lede, body, ack in PAGES:
     cur = ' aria-current="page"'
     nav = ''.join(f'<a href="{f}"{cur if f == fname else ""}>{html.escape(t)}</a>' for f, t in NAV)
