@@ -42,7 +42,7 @@ const MODEL_NAME = {
   sahvai: 'Hybrid 2D/3D UNet (Hu et al., NeuroImage 2023;279:120321), BrainHemoAI weights, MIT License',
   claim: 'nnU-Net v2 2D multiclass aSAH model (Kiewitz et al., Front Neurol 2024;15:1490216), CLAIM Charité weights, CC BY-NC 4.0',
   blast: 'BLAST-CT DeepMedic (Monteiro et al., Lancet Digit Health 2020;2:e314-22), biomedia-mira weights, Apache-2.0',
-  deepbleed: 'DeepBleed 3D V-Net (Sharrock et al., Neuroinformatics 2021;19:403-415), MISTIE-2 weights, CC BY-NC-ND 4.0 (format conversion only)',
+  deepbleed: 'DeepBleed 3D V-Net (Sharrock et al., Neuroinformatics 2021;19:403-415), MISTIE-2 weights, CC BY-NC 4.0 with the permission of Dr Matthew Sharrock (format conversion only)',
   sahswin: 'SAH Swin UNETR (García-García, Cepeda et al., World Neurosurg 2024; Brain Sci 2024;14:10), Río Hortega / Augsburg weights, academic non-commercial licence (format conversion only)',
 };
 

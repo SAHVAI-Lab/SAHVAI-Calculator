@@ -1,6 +1,6 @@
 // DeepBleed (Sharrock MF, Mould WA, Ali H, et al. 3D deep neural network segmentation of intracerebral hemorrhage:
 // development and validation for clinical trials. Neuroinformatics 2021;19:403-415; github.com/msharrock/deepbleed,
-// CC BY-NC-ND 4.0; MISTIE-2 weights) in the browser.
+// published CC BY-NC-ND 4.0, used here under CC BY-NC 4.0 with Dr Sharrock's permission; MISTIE-2 weights) in the browser.
 //
 // DeepBleed's predict.py: brain extraction (FSL BET for CT) -> rigid registration (ANTs, Mattes MI) of the brain to a
 // 1.5 mm, 128^3 CT template -> 3D V-Net -> mask > 0.5 -> inverse transform back to the scan (genericLabel).

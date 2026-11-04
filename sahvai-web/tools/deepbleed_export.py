@@ -1,4 +1,4 @@
-"""DeepBleed VNet (Sharrock et al., Neuroinformatics 2021; github.com/msharrock/deepbleed, CC BY-NC-ND 4.0)
+"""DeepBleed VNet (Sharrock et al., Neuroinformatics 2021; github.com/msharrock/deepbleed, published CC BY-NC-ND 4.0; this browser version CC BY-NC 4.0 with Dr Sharrock's permission)
 re-expressed in PyTorch with the published MISTIE-2 weights, checked against a TensorFlow reference built from the
 same checkpoint, exported to ONNX (float32, weights unchanged: a format conversion only).
 Usage: python3 export_vnet.py /path/to/weights out.onnx   (weights = the TF checkpoint prefix)"""
