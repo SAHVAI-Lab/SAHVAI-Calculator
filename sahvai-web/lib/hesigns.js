@@ -503,11 +503,14 @@ export function batScore({ blend, hypodensity, hours }) {
   return { score: s, high: s >= 3 };
 }
 // BRAIN (Wang et al., Stroke 2015): volume <=10 0, 10-20 5, >20 7; recurrent ICH 4; warfarin 6; IVH 2; hours <=1 5, 1-2 4, 2-3 3, 3-4 2, 4-5 1, >5 0
+// predicted probability (%) of growth >= 6 mL at 24 h by point total, Figure 1 of the paper (PMID 25503550)
+export const BRAIN_PROB = [3.4, 4.2, 5.1, 6.3, 7.7, 9.4, 11.3, 13.7, 16.4, 19.5, 23.1, 27.2, 31.6, 36.4, 41.5, 46.7, 52.1, 57.4, 62.5, 67.4, 71.9, 76.0, 79.7, 83.0, 85.8];
 export function brainScore({ volume, recurrent, warfarin, ivh, hours }) {
   if (volume == null || hours == null || isNaN(hours)) return null;
   const v = volume <= 10 ? 0 : volume <= 20 ? 5 : 7;
   const t = hours <= 1 ? 5 : hours <= 2 ? 4 : hours <= 3 ? 3 : hours <= 4 ? 2 : hours <= 5 ? 1 : 0;
-  return { score: v + (recurrent ? 4 : 0) + (warfarin ? 6 : 0) + (ivh ? 2 : 0) + t, parts: { volume: v, recurrent: recurrent ? 4 : 0, warfarin: warfarin ? 6 : 0, ivh: ivh ? 2 : 0, time: t } };
+  const score = v + (recurrent ? 4 : 0) + (warfarin ? 6 : 0) + (ivh ? 2 : 0) + t;
+  return { score, probability_pct: BRAIN_PROB[score], parts: { volume: v, recurrent: recurrent ? 4 : 0, warfarin: warfarin ? 6 : 0, ivh: ivh ? 2 : 0, time: t } };
 }
 
 // ---------- DeepMedX sICH_HE region of interest (crop2DROI.ipynb), for their ViT classifier ----------

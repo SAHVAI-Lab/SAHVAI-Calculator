@@ -271,8 +271,9 @@ function renderScores() {
     <div class="scard"><h4>BRAIN score <small>Wang et al., Stroke 2015 (INTERACT)</small></h4>
       <table><tr><td>Baseline volume ${vol.toFixed(1)} mL</td><td>${vol <= 10 ? 0 : vol <= 20 ? 5 : 7}</td></tr><tr><td>Recurrent ICH</td><td>${$('recurrent').checked ? 4 : 0}</td></tr>
       <tr><td>Warfarin at onset</td><td>${$('warfarin').checked ? 6 : 0}</td></tr><tr><td>IVH extension${$('ivh').value === 'auto' ? ` (scan: ${S.volumes.IVH.toFixed(1)} mL)` : ''}</td><td>${ivhYes() ? 2 : 0}</td></tr>
-      <tr><td>Hours onset to CT</td><td>${br ? br.parts.time : '?'}</td></tr><tr class="tot"><td>Total (0–24)</td><td>${br ? br.score : '?'}</td></tr></table>
-      <p class="small">Predicted probability of ≥ 6 mL growth at 24 h rose from 3.4% at 0 points to 85.8% at 24 points (C-statistic 0.73). The volume here is the AI segmentation, not ABC/2.</p></div>
+      <tr><td>Hours onset to CT</td><td>${br ? br.parts.time : '?'}</td></tr><tr class="tot"><td>Total (0–24)</td><td>${br ? br.score : '?'}</td></tr>
+      <tr class="tot"><td>Predicted probability of growth ≥ 6 mL at 24 h</td><td>${br ? br.probability_pct.toFixed(1) + '%' : '?'}</td></tr></table>
+      <p class="small">From the development model (INTERACT2; 3.4% at 0 points to 85.8% at 24; validated C-statistic 0.73). The volume here is the AI segmentation, not ABC/2; the anticoagulant item was derived for warfarin.</p></div>
     <div class="scard"><h4>Ultra-early hematoma growth <small>volume ÷ onset-to-CT time</small></h4>
       <p class="big">${uhg != null ? `${uhg.toFixed(1)} <small>mL/h</small>` : '<small>enter onset-to-CT time</small>'}</p>
       <p class="small">A time-adjusted marker of early bleeding rate (reviewed by Liu et al. 2026); it assumes zero volume at onset and depends on an accurate onset time.</p></div>

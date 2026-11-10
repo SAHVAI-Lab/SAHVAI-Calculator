@@ -134,6 +134,35 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   .card { break-inside:avoid; }
 }
 
+/* BRAIN score (ICH expansion tab) */
+.brain-lede { font-size:0.8rem; color:var(--muted); margin-bottom:0.75rem; }
+.brain-grid { display:grid; grid-template-columns: 3fr 2fr; gap:1rem; align-items:start; }
+@media(max-width:800px) { .brain-grid { grid-template-columns:1fr; } }
+.brain-item { margin-bottom:0.55rem; }
+.brain-item label { display:block; font-size:0.78rem; font-weight:600; color:var(--text); margin-bottom:0.2rem; }
+.brain-item label b { color:var(--mayo-blue); font-size:0.9rem; }
+.brain-item select { width:100%; padding:0.4rem 0.5rem; border:1px solid var(--border); border-radius:6px; font-size:0.85rem; background:var(--input-bg); }
+.brain-item select:focus { border-color:var(--mayo-blue); outline:none; box-shadow:0 0 0 2px rgba(0,61,165,0.15); }
+.brain-reset { margin-top:0.25rem; padding:0.35rem 0.9rem; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--muted); font-size:0.78rem; cursor:pointer; }
+.brain-reset:hover { color:var(--mayo-blue); border-color:var(--mayo-blue); }
+.brain-result { background:linear-gradient(135deg, var(--mayo-dark), var(--mayo-blue)); color:#fff; border-radius:12px; padding:1.1rem; text-align:center; }
+.brain-label { font-size:0.75rem; opacity:0.85; }
+.brain-score { font-size:2.6rem; font-weight:800; line-height:1.1; }
+.brain-score small { font-size:1rem; font-weight:600; opacity:0.8; }
+.brain-prob { font-size:2.1rem; font-weight:800; line-height:1.2; }
+.brain-bar { height:8px; border-radius:4px; background:rgba(255,255,255,0.25); margin:0.5rem 0; overflow:hidden; }
+.brain-bar-fill { height:100%; width:0; background:#fff; border-radius:4px; transition:width 0.4s ease; }
+.brain-note { font-size:0.75rem; opacity:0.9; }
+.brain-table-wrap { margin-top:0.9rem; font-size:0.8rem; }
+.brain-table-wrap summary { cursor:pointer; color:var(--mayo-blue); font-weight:600; }
+.brain-table { border-collapse:collapse; margin-top:0.5rem; width:100%; max-width:640px; font-size:0.78rem; }
+.brain-table th { background:var(--mayo-light); color:var(--mayo-blue); padding:0.3rem 0.4rem; font-size:0.7rem; text-transform:uppercase; }
+.brain-table td { padding:0.25rem 0.4rem; border-bottom:1px solid var(--border); text-align:center; }
+.brain-table td.hit { background:var(--mayo-blue); color:#fff; font-weight:700; }
+.brain-caveats { font-size:0.75rem; color:var(--muted); margin-top:0.9rem; line-height:1.55; }
+.brain-ref { font-size:0.78rem; margin-top:0.75rem; padding:0.6rem 0.75rem; background:var(--mayo-light); border-radius:8px; border-left:3px solid var(--mayo-blue); }
+.brain-ref a { color:var(--mayo-blue); }
+
 /* Tabs for sections */
 .tab-bar { display:flex; gap:0.25rem; margin-bottom:1rem; flex-wrap:wrap; }
 .tab-btn { padding:0.4rem 1rem; border:1px solid var(--border); border-radius:8px 8px 0 0; background:var(--card); font-size:0.8rem; cursor:pointer; font-weight:500; color:var(--muted); border-bottom:none; }
@@ -625,6 +654,84 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   <p style="font-size:0.72rem;opacity:0.8;margin-top:0.6rem;">Research and education use only &mdash; not a medical device. Signs are rule-based candidates for a reader to confirm. Embedded below, CPU mode runs on one thread; open full screen for multi-threaded CPU (WebGPU is fast in both).</p>
 </div>
 
+<!-- BRAIN score (manual): Wang X, et al. Stroke 2015;46:376-381. PMID 25503550 -->
+<div class="card brain-card" id="brain-score">
+  <div class="card-title">BRAIN Score &mdash; predicted risk of ICH growth at 24 hours</div>
+  <p class="brain-lede">Bedside score from five items available at the first CT; no images needed. Predicts clinically significant hematoma growth (&ge;&nbsp;6&nbsp;mL absolute increase from baseline to 24&nbsp;h). Derived in the INTERACT2 CT substudy (n&nbsp;=&nbsp;964) and validated in INTERACT1 (n&nbsp;=&nbsp;346; C-statistic 0.73, Hosmer&ndash;Lemeshow P&nbsp;=&nbsp;0.82). To score a scan automatically, use the AI tool below, which fills in volume and IVH from the segmentation.</p>
+  <div class="brain-grid">
+    <div class="brain-inputs">
+      <div class="brain-item">
+        <label for="brain_b"><b>B</b>aseline ICH volume</label>
+        <select id="brain_b" onchange="calcBRAIN()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="0">&le; 10 mL (0)</option>
+          <option value="5">10&ndash;20 mL (5)</option>
+          <option value="7">&gt; 20 mL (7)</option>
+        </select>
+      </div>
+      <div class="brain-item">
+        <label for="brain_r"><b>R</b>ecurrent ICH</label>
+        <select id="brain_r" onchange="calcBRAIN()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="0">No (0)</option>
+          <option value="4">Yes (4)</option>
+        </select>
+      </div>
+      <div class="brain-item">
+        <label for="brain_a"><b>A</b>nticoagulation with warfarin at onset</label>
+        <select id="brain_a" onchange="calcBRAIN()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="0">No (0)</option>
+          <option value="6">Yes (6)</option>
+        </select>
+      </div>
+      <div class="brain-item">
+        <label for="brain_i"><b>I</b>ntraventricular extension</label>
+        <select id="brain_i" onchange="calcBRAIN()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="0">No (0)</option>
+          <option value="2">Yes (2)</option>
+        </select>
+      </div>
+      <div class="brain-item">
+        <label for="brain_n"><b>N</b>umber of hours from symptom onset to baseline CT</label>
+        <select id="brain_n" onchange="calcBRAIN()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="5">&le; 1 h (5)</option>
+          <option value="4">1&ndash;2 h (4)</option>
+          <option value="3">2&ndash;3 h (3)</option>
+          <option value="2">3&ndash;4 h (2)</option>
+          <option value="1">4&ndash;5 h (1)</option>
+          <option value="0">&gt; 5 h (0)</option>
+        </select>
+      </div>
+      <button type="button" class="brain-reset" onclick="resetBRAIN()">Reset</button>
+    </div>
+    <div class="brain-result" aria-live="polite">
+      <div class="brain-label">BRAIN score</div>
+      <div class="brain-score"><span id="brainScore">&ndash;</span><small> / 24</small></div>
+      <div class="brain-label" style="margin-top:0.6rem;">Predicted probability of ICH growth &ge; 6 mL at 24 h</div>
+      <div class="brain-prob" id="brainProb">&ndash;</div>
+      <div class="brain-bar"><div class="brain-bar-fill" id="brainBar"></div></div>
+      <div class="brain-note" id="brainNote">Select all five items. Partial: <span id="brainPartial">0</span> points.</div>
+    </div>
+  </div>
+
+  <details class="brain-table-wrap">
+    <summary>Points &rarr; predicted probability (Figure 1 of the paper)</summary>
+    <table class="brain-table" id="brainTable"></table>
+  </details>
+
+  <div class="brain-caveats">
+    <b>Interpreting the score.</b> Probabilities are from the development model. In INTERACT2 the median predicted probability was 16.4% (IQR 7.7&ndash;27.2%) and 18.8% of patients had growth &ge; 6 mL; in the INTERACT1 validation cohort it was 9.3% (IQR 5.1&ndash;16.6%). The cohorts were adults with spontaneous ICH enrolled within 6 h of onset with systolic BP 150&ndash;220 mmHg; over 90% of the validation cohort was Chinese, the CTA spot sign was not assessed, and the anticoagulant item was derived for warfarin (other oral anticoagulants were not studied). Volume categories follow the paper (planimetric volume; ABC/2 is an approximation). Research and education use only &mdash; not a medical device.
+  </div>
+
+  <div class="brain-ref">
+    <b>Reference</b><br>
+    Wang X, Arima H, Al-Shahi Salman R, et al; INTERACT Investigators. Clinical prediction algorithm (BRAIN) to determine risk of hematoma growth in acute intracerebral hemorrhage. <i>Stroke</i>. 2015;46(2):376-381. doi:<a href="https://doi.org/10.1161/STROKEAHA.114.006910" target="_blank" rel="noopener">10.1161/STROKEAHA.114.006910</a>. PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/25503550/" target="_blank" rel="noopener">25503550</a>
+  </div>
+</div>
+
 <div class="card" style="padding:0;overflow:hidden;">
   <iframe id="hesignsWebFrame" data-src="sahvai-web/hesigns.html" title="ICH expansion signs in the browser" style="width:100%;height:1800px;border:0;display:block;" loading="lazy"></iframe>
 </div>
@@ -966,6 +1073,33 @@ function calcESAH() {
   document.getElementById('esahInterp').textContent = interps[s] || '';
 }
 
+// ===== BRAIN SCORE (Wang X, et al. Stroke 2015;46:376-381; PMID 25503550) =====
+// predicted probability (%) of ICH growth >= 6 mL at 24 h by point total, Figure 1 of the paper
+const BRAIN_PROB = [3.4, 4.2, 5.1, 6.3, 7.7, 9.4, 11.3, 13.7, 16.4, 19.5, 23.1, 27.2, 31.6, 36.4, 41.5, 46.7, 52.1, 57.4, 62.5, 67.4, 71.9, 76.0, 79.7, 83.0, 85.8];
+const BRAIN_IDS = ['brain_b', 'brain_r', 'brain_a', 'brain_i', 'brain_n'];
+function calcBRAIN() {
+  const vals = BRAIN_IDS.map(id => document.getElementById(id).value);
+  const done = vals.every(v => v !== ''), pts = vals.reduce((a, v) => a + (v === '' ? 0 : +v), 0);
+  document.getElementById('brainScore').textContent = done ? pts : '\u2013';
+  document.getElementById('brainProb').textContent = done ? BRAIN_PROB[pts].toFixed(1) + '%' : '\u2013';
+  document.getElementById('brainBar').style.width = done ? BRAIN_PROB[pts] + '%' : '0';
+  const note = document.getElementById('brainNote');
+  note.innerHTML = done ? 'About ' + Math.round(BRAIN_PROB[pts]) + ' in 100 patients with this score had growth &ge; 6 mL in the development model.'
+    : 'Select all five items. Partial: <span id="brainPartial">' + pts + '</span> points.';
+  document.querySelectorAll('#brainTable td[data-p]').forEach(td => td.classList.toggle('hit', done && +td.dataset.p === pts));
+}
+function resetBRAIN() { BRAIN_IDS.forEach(id => { document.getElementById(id).value = ''; }); calcBRAIN(); }
+(function buildBrainTable() {
+  const t = document.getElementById('brainTable'); if (!t) return;
+  let h = '<thead><tr><th>Points</th><th>Probability</th><th>Points</th><th>Probability</th><th>Points</th><th>Probability</th></tr></thead><tbody>';
+  for (let r = 0; r < 9; r++) {
+    h += '<tr>';
+    for (let c = 0; c < 3; c++) { const p = r + 9 * c; h += p <= 24 ? `<td data-p="${p}">${p}</td><td data-p="${p}">${BRAIN_PROB[p].toFixed(1)}%</td>` : '<td></td><td></td>'; }
+    h += '</tr>';
+  }
+  t.innerHTML = h + '</tbody>';
+})();
+
 // ===== MODIFIED GRAEB =====
 function calcGraeb() {
   const ids = ['g_llf','g_rlf','g_llb','g_rlb','g_llt','g_rlt','g_3v','g_4v'];
@@ -1151,7 +1285,7 @@ function showTab(name) {
 // ===== TAB LINKS: open the tab named in the address (#deepbleed, #claim, …; a few friendlier names too) =====
 const TAB_HASH = { citations: 'publications', web: 'sahvai-web', web3d: 'sahvai-3d', hesigns: 'ich-expansion' };   // tab id -> address name, where friendlier
 const TAB_ALIASES = { publications: 'citations', 'sahvai-web': 'web', sahvai: 'web', brainhemoai: 'web', '3d': 'web3d', 'sahvai-3d': 'web3d', '4d': 'web3d',
-  'blast-ct': 'blast', swin: 'sahswin', 'sah-swin-unetr': 'sahswin', valladolid: 'sahswin', expansion: 'hesigns', 'ich-expansion': 'hesigns',
+  'blast-ct': 'blast', swin: 'sahswin', 'sah-swin-unetr': 'sahswin', valladolid: 'sahswin', expansion: 'hesigns', 'ich-expansion': 'hesigns', brain: 'hesigns', 'brain-score': 'hesigns',
   'heads-up': 'headsup', detector: 'headsup', dataset: 'research', 'research-dataset': 'research', data: 'research', graeb: 'ivh', anatomy: 'references', multimodal: 'mm', 'sahvai-mm': 'mm' };
 function tabFromHash() {
   let h = decodeURIComponent(location.hash.replace(/^#/, '')).trim().toLowerCase();
