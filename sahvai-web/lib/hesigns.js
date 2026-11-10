@@ -513,6 +513,32 @@ export function brainScore({ volume, recurrent, warfarin, ivh, hours }) {
   return { score, probability_pct: BRAIN_PROB[score], parts: { volume: v, recurrent: recurrent ? 4 : 0, warfarin: warfarin ? 6 : 0, ivh: ivh ? 2 : 0, time: t } };
 }
 
+// Target expansion score (Morotti et al., Neurology 2026;107(9):e218675; PMID 42879724), for late presenters imaged
+// 2-12 h from onset or last seen well: high uHG (baseline volume / onset-to-NCCT time > 10 mL/h) 1, NCCT hypodensities
+// (any hypodensity encapsulated within the hematoma) 1, CTA spot sign 2; a score >= 2 meets the target expansion criteria.
+// hypodensity and spot are true / false / null (not assessed): one NCCT or CTA run reads only one of them, so the score
+// stays partial until the other is known, but the criteria can already be met (or ruled out) from the items in hand.
+// Observed HE (> 33% and/or > 6 mL) and mean growth by score, Table 5: [n with HE, N, mean growth mL]
+export const TES_OBSERVED = {
+  development: [[13, 132, 0.9], [21, 123, 3.9], [28, 58, 11.5], [17, 24, 13.0], [7, 8, 26.9]],
+  validation: [[3, 51, 4.3], [10, 55, 6.7], [12, 24, 11.2], [3, 6, 19.5], [8, 11, 21.2]],
+};
+export function targetExpansionScore({ volume, hours, hypodensity, spot }) {
+  if (volume == null || hours == null || isNaN(hours) || !(hours > 0)) return null;
+  const uhg = volume / hours;
+  const parts = { uhg: uhg > 10 ? 1 : 0, hypodensity: hypodensity == null ? null : hypodensity ? 1 : 0, spot: spot == null ? null : spot ? 2 : 0 };
+  const known = parts.uhg + (parts.hypodensity ?? 0) + (parts.spot ?? 0);
+  const max = known + (parts.hypodensity == null ? 1 : 0) + (parts.spot == null ? 2 : 0);
+  const complete = parts.hypodensity != null && parts.spot != null;
+  const obs = s => { const [d, v] = [TES_OBSERVED.development[s], TES_OBSERVED.validation[s]]; return { development: { he: d[0], n: d[1], pct: +(100 * d[0] / d[1]).toFixed(1), mean_growth_mL: d[2] }, validation: { he: v[0], n: v[1], pct: +(100 * v[0] / v[1]).toFixed(1), mean_growth_mL: v[2] } }; };
+  return {
+    score: complete ? known : null, known_points: known, max_possible: max, complete,
+    criteria_met: known >= 2 ? true : max < 2 ? false : null,   // null: depends on the item(s) not yet known
+    uhg_mL_per_h: +uhg.toFixed(2), parts, in_window: hours >= 2 && hours <= 12,
+    observed: complete ? obs(known) : null,
+  };
+}
+
 // ---------- DeepMedX sICH_HE region of interest (crop2DROI.ipynb), for their ViT classifier ----------
 // The published code upsamples the CT and mask 3.5x in all three axes, takes the slice with the largest mask area and
 // its two neighbours (+-1/3.5 of a 5 mm slice), crops each to the bounding box of the largest connected component,

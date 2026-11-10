@@ -203,6 +203,9 @@ body.busy .panel .drop:not(.busy) { opacity: .7; }
 .scard tr.tot td { border-top: 2px solid var(--mayo-blue); font-weight: 800; color: var(--mayo-dark); }
 .scard .big { font-size: 1.8rem; font-weight: 800; color: var(--mayo-dark); margin: 4px 0; }
 .scard .big small { font-size: .85rem; font-weight: 600; color: var(--muted); }
+.scard .tsrc { display: block; font-size: .74rem; color: var(--muted); }
+.scard td select { font: inherit; font-size: .8rem; padding: 1px 4px; border: 1px solid var(--mayo-blue); border-radius: 6px; }
+.scard .tflag { color: #8a5a00; background: #fff8e1; border-radius: 6px; padding: 3px 6px; }
 .scard p { margin: 6px 0 0; }
 .dmx { background: #f6f9ff; border: 1px solid #c9d6ee; border-radius: 12px; padding: 10px 14px; }
 .dmx > p { margin: 0 0 8px; }

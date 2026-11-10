@@ -4,7 +4,7 @@ import { niftiGz, toInt16 } from './lib/export.js';
 import { receivedHandoff, handoffBanner, handoffFiles } from './lib/handoff.js';
 import { Viewer, save } from './lib/viewer.js';
 import { mountResearch, publicInfo } from './lib/research.js';
-import { analyseSigns, deepmedxROI, batScore, brainScore, expansion, NEW_IVH_mL, OVERLAY, SIGN_INFO, CRITERIA } from './lib/hesigns.js';
+import { analyseSigns, deepmedxROI, batScore, brainScore, targetExpansionScore, expansion, NEW_IVH_mL, OVERLAY, SIGN_INFO, CRITERIA } from './lib/hesigns.js';
 
 const $ = id => document.getElementById(id), q = s => document.querySelector(s);
 const logEl = $('log'), t0 = performance.now();
@@ -274,12 +274,47 @@ function renderScores() {
       <tr><td>Hours onset to CT</td><td>${br ? br.parts.time : '?'}</td></tr><tr class="tot"><td>Total (0–24)</td><td>${br ? br.score : '?'}</td></tr>
       <tr class="tot"><td>Predicted probability of growth ≥ 6 mL at 24 h</td><td>${br ? br.probability_pct.toFixed(1) + '%' : '?'}</td></tr></table>
       <p class="small">From the development model (INTERACT2; 3.4% at 0 points to 85.8% at 24; validated C-statistic 0.73). The volume here is the AI segmentation, not ABC/2; the anticoagulant item was derived for warfarin.</p></div>
+    ${tesCard(vol, h)}
     <div class="scard"><h4>Ultra-early hematoma growth <small>volume ÷ onset-to-CT time</small></h4>
       <p class="big">${uhg != null ? `${uhg.toFixed(1)} <small>mL/h</small>` : '<small>enter onset-to-CT time</small>'}</p>
       <p class="small">A time-adjusted marker of early bleeding rate (reviewed by Liu et al. 2026); it assumes zero volume at onset and depends on an accurate onset time.</p></div>
     ${S.contrast.enhanced ? `<div class="scard"><h4>Spot sign score <small>Delgado Almandoz et al., Stroke 2009</small></h4><p class="big">${S.signs.spot.score ?? 0} <small>/ 4</small></p><p class="small">Number of spots (1–2: 1, ≥ 3: 2), maximum axial dimension ≥ 5 mm (1), maximum attenuation ≥ 180 HU (1). Approximate: measured on 5 mm slabs.</p></div>` : ''}`;
 }
 ['hours', 'warfarin', 'recurrent', 'ivh'].forEach(id => $(id).addEventListener('input', renderScores));
+// a missing target-expansion item set on its card is the same reader override as on the sign card
+q('.scores').addEventListener('change', e => {
+  const sel = e.target.closest('select[data-tes]'); if (!sel || !R) return;
+  const k = sel.dataset.tes; if (sel.value === '') delete override[k]; else override[k] = sel.value === '1';
+  renderSigns(); renderScores();
+});
+
+// Target expansion score (Morotti et al., Neurology 2026; PMID 42879724): uHG from the segmentation and the onset time,
+// NCCT hypodensities and the CTA spot sign from the signs read on this scan (or the reader's call)
+function tesCard(vol, h) {
+  const T = targetExpansionScore({ volume: vol, hours: h, hypodensity: eff('hypodensity'), spot: eff('spot') });
+  const src = k => override[k] != null ? 'reader' : R.S.signs[k].auto != null ? 'this scan' : null;
+  const item = (k, label, pts) => {
+    const v = eff(k), s = src(k);
+    const cell = v == null ? `<select data-tes="${k}" aria-label="${label}"><option value="">?</option><option value="0">absent</option><option value="1">present</option></select>`
+      : `${v ? pts : 0}`;
+    return `<tr><td>${label} <span class="tsrc">${s ? `${v ? 'present' : 'absent'} · ${s}` : (INFO[k].modality === 'NCCT' ? 'not read on a contrast scan' : 'needs CTA') + ': set it here'}</span></td><td>${cell}</td></tr>`;
+  };
+  const uhgRow = `<tr><td>uHG ${T ? `${vol.toFixed(1)} mL ÷ ${h} h = ${T.uhg_mL_per_h.toFixed(1)} mL/h` : '<span class="tsrc">enter onset-to-CT time</span>'} <span class="tsrc">high if &gt; 10 mL/h</span></td><td>${T ? T.parts.uhg : '?'}</td></tr>`;
+  const verdict = !T ? '?' : T.criteria_met === true ? 'Met' : T.criteria_met === false ? 'Not met' : 'Pending';
+  const total = !T ? '?' : T.complete ? T.score : `${T.known_points}–${T.max_possible}`;
+  const flags = [];
+  if (h != null && h > 0 && !T.in_window) flags.push(`imaging at ${h} h is outside the 2–12 h window it was derived in`);
+  if ($('warfarin').checked) flags.push('anticoagulated patients were excluded');
+  if (vol >= 100) flags.push('volume ≥ 100 mL was excluded');
+  const o = T && T.observed;
+  return `<div class="scard"><h4>Target expansion score <small>Morotti et al., Neurology 2026 (late presenters, 2–12 h)</small></h4>
+      <table>${uhgRow}${item('hypodensity', 'NCCT hypodensities', 1)}${item('spot', 'CTA spot sign', 2)}
+      <tr class="tot"><td>Total (0–4)</td><td>${total}</td></tr><tr class="tot"><td>Target expansion criteria (score ≥ 2)</td><td>${verdict}</td></tr></table>
+      ${o ? `<p class="small">With this score, ${o.development.he} of ${o.development.n} late presenters (${o.development.pct}%) expanded &gt; 33% and/or &gt; 6 mL (mean growth ${o.development.mean_growth_mL} mL); validation ${o.validation.he}/${o.validation.n} (${o.validation.pct}%).</p>`
+        : T && !T.complete ? `<p class="small">One scan type reads only one of the two signs: a non-contrast CT gives the hypodensities, a CTA the spot sign. Set the other from the paired scan; the score was derived only in patients with both.</p>` : ''}
+      ${flags.length ? `<p class="small tflag">Outside the derivation population: ${flags.join('; ')}.</p>` : ''}
+      <p class="small">Score ≥ 2: sensitivity 0.61–0.64, specificity 0.84–0.85 (AUC 0.77–0.79); exploratory, not externally validated. Signs here are automatic candidates for a reader to confirm.</p></div>`;
+}
 
 function grayCanvas(img, w, h, maxH) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
@@ -317,7 +352,7 @@ function report() {
     status: S.status, contrast: S.contrast, hematoma: S.hematoma && { ...S.hematoma, box: undefined, maxSlice: S.hematoma.maxSlice + 1 },
     signs: Object.fromEntries(SIGN_ORDER.map(k => [k, { name: INFO[k].name, modality: INFO[k].modality, auto: S.signs[k].auto, reader: override[k] ?? null, used: eff(k) ?? null, detail: S.signs[k].detail, slices: [...new Set(S.signs[k].evidence.map(e => e.slice).filter(z => z != null))].map(z => z + 1), definition: INFO[k].def, reference: INFO[k].ref }])),
     clinical: { onset_to_ct_h: h, warfarin: $('warfarin').checked, recurrent_ich: $('recurrent').checked, ivh: ivhYes() },
-    scores: S.status === 'ok' ? { BAT: batScore({ blend: !!eff('blend'), hypodensity: !!eff('hypodensity'), hours: h }), BRAIN: brainScore({ volume: S.volumes.main, recurrent: $('recurrent').checked, warfarin: $('warfarin').checked, ivh: ivhYes(), hours: h }), uHG_mL_per_h: h > 0 ? r1(S.volumes.main / h) : null, spot_sign_score: S.signs.spot.score ?? null } : null,
+    scores: S.status === 'ok' ? { BAT: batScore({ blend: !!eff('blend'), hypodensity: !!eff('hypodensity'), hours: h }), BRAIN: brainScore({ volume: S.volumes.main, recurrent: $('recurrent').checked, warfarin: $('warfarin').checked, ivh: ivhYes(), hours: h }), uHG_mL_per_h: h > 0 ? r1(S.volumes.main / h) : null, target_expansion: targetExpansionScore({ volume: S.volumes.main, hours: h, hypodensity: eff('hypodensity'), spot: eff('spot') }), spot_sign_score: S.signs.spot.score ?? null } : null,
     yale_model: R.yale ? { model: 'Tran et al., npj Digit Med 2024 (github.com/anhtrnyaleedu/HE)', attribution: 'Hematoma-expansion model: © 2024 Yale University, BSD 3-Clause License. Tran AT, Payabvash S, et al. npj Digit Med 2024;7:26; github.com/anhtrnyaleedu/HE. Hosted with the authors’ permission. Changes: converted to ONNX (weights unchanged); preprocessing re-implemented in JavaScript.', target: 'HE >= 6 mL', p: R.yale.mc.passes ? R.yale.mc.p : R.yale.det.p, p_deterministic: R.yale.det.p, mc_passes: R.yale.mc.passes, mc_sd: R.yale.mc.sd, entropy_bits: R.yale.mc.entropy, mask: R.yale.segSource, mask_mL: R.yale.segVolume, device: R.yale.device, seconds: R.yale.seconds } : null,
     follow_up: (() => { const g = id => { const el = $(id); return el && el.value !== '' ? +el.value : null; }; const E = g('fu-ich1') != null ? expansion({ ich0: g('fu-ich0'), ich1: g('fu-ich1'), ivh0: g('fu-ivh0') || 0, ivh1: g('fu-ivh1') || 0 }) : null;
       return E ? { ich_mL: [g('fu-ich0'), g('fu-ich1')], ivh_mL: [g('fu-ivh0'), g('fu-ivh1')], ...E, definitions: { conventional: 'ICH growth > 6 mL or > 33% (Dowlatshahi 2011)', revised: 'ICH growth >= 6 mL or >= 33%, IVH growth >= 1 mL, or new IVH (Yogendrakumar, Stroke 2020)' } } : null; })(),
