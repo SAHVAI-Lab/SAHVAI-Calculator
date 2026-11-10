@@ -163,6 +163,21 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
 .brain-ref { font-size:0.78rem; margin-top:0.75rem; padding:0.6rem 0.75rem; background:var(--mayo-light); border-radius:8px; border-left:3px solid var(--mayo-blue); }
 .brain-ref a { color:var(--mayo-blue); }
 
+.tes-pair { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
+@media(max-width:500px) { .tes-pair { grid-template-columns:1fr; } }
+.tes-pair input { width:100%; padding:0.4rem 0.5rem; border:1px solid var(--border); border-radius:6px; font-size:0.85rem; background:var(--input-bg); }
+.tes-pair input:focus { border-color:var(--mayo-blue); outline:none; box-shadow:0 0 0 2px rgba(0,61,165,0.15); }
+.tes-sub { display:block; font-size:0.72rem; font-weight:400; color:var(--muted); }
+label .tes-sub { display:inline; }
+.tes-uhg { font-size:0.78rem; margin-top:0.3rem; padding:0.3rem 0.5rem; background:var(--mayo-light); border-radius:6px; color:var(--mayo-dark); }
+.tes-elig { padding:0.5rem 0.6rem; border:1px dashed var(--border); border-radius:8px; }
+.tes-check { display:inline-flex !important; align-items:center; gap:0.35rem; font-weight:500 !important; margin-right:1rem; margin-top:0.25rem; }
+.tes-verdict { display:inline-block; margin-top:0.3rem; padding:0.2rem 0.7rem; border-radius:999px; background:rgba(255,255,255,0.18); font-size:0.8rem; font-weight:700; }
+.tes-verdict.met { background:#fff; color:var(--accent); }
+.tes-flags { margin-top:0.75rem; padding:0.55rem 0.75rem; border-radius:8px; background:#fff8e1; border:1px solid var(--warn); font-size:0.78rem; color:#5d4300; }
+.tes-table tr.hit td { background:var(--mayo-blue); color:#fff; font-weight:700; }
+.tes-table tbody tr[data-g="lo"] td { border-top:2px solid var(--border); }
+
 /* Tabs for sections */
 .tab-bar { display:flex; gap:0.25rem; margin-bottom:1rem; flex-wrap:wrap; }
 .tab-btn { padding:0.4rem 1rem; border:1px solid var(--border); border-radius:8px 8px 0 0; background:var(--card); font-size:0.8rem; cursor:pointer; font-weight:500; color:var(--muted); border-bottom:none; }
@@ -732,6 +747,85 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background
   </div>
 </div>
 
+<!-- Target Expansion Score (late presenters): Morotti A, et al. Neurology 2026;107(9):e218675. PMID 42879724 -->
+<div class="card brain-card" id="target-expansion">
+  <div class="card-title">Target Expansion Score &mdash; late presenters (2&ndash;12 h from onset)</div>
+  <p class="brain-lede">Imaging-based &ldquo;target expansion criteria&rdquo; for patients first imaged 2&ndash;12 h after onset or last seen well, by analogy with target mismatch in ischemic stroke. Three items from NCCT and CTA give a 0&ndash;4 score; <b>a score &ge;&nbsp;2 meets the target expansion criteria</b>. Outcome: hematoma expansion &gt;&nbsp;33% and/or &gt;&nbsp;6&nbsp;mL from baseline to follow-up NCCT (24&ndash;72&nbsp;h). Derived and internally validated in a retrospective multicenter cohort from Italy, Germany and China (n&nbsp;=&nbsp;345 development, 147 validation; AUC 0.77 and 0.79).</p>
+  <div class="brain-grid">
+    <div class="brain-inputs">
+      <div class="brain-item">
+        <label>Ultra-early hematoma growth (uHG) = baseline volume &divide; onset-to-NCCT time</label>
+        <div class="tes-pair">
+          <div><span class="tes-sub">Baseline ICH volume (mL)</span><input type="number" id="tes_vol" min="0" step="0.1" placeholder="e.g. 30" oninput="calcTES()"></div>
+          <div><span class="tes-sub">Onset or last seen well &rarr; NCCT (h)</span><input type="number" id="tes_time" min="0" step="0.1" placeholder="e.g. 3.5" oninput="calcTES()"></div>
+        </div>
+        <div class="tes-uhg" id="tesUhg">uHG: enter volume and time. High uHG (&gt; 10 mL/h) scores 1.</div>
+      </div>
+      <div class="brain-item">
+        <label for="tes_hypo">NCCT hypodensities <span class="tes-sub">(any hypodensity encapsulated within the hemorrhage)</span></label>
+        <select id="tes_hypo" onchange="calcTES()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="0">Absent (0)</option>
+          <option value="1">Present (1)</option>
+        </select>
+      </div>
+      <div class="brain-item">
+        <label for="tes_spot">CTA spot sign</label>
+        <select id="tes_spot" onchange="calcTES()">
+          <option value="">&mdash; select &mdash;</option>
+          <option value="0">Absent (0)</option>
+          <option value="2">Present (2)</option>
+          <option value="na">CTA not done</option>
+        </select>
+        <div class="tes-sub" style="margin-top:0.2rem;">Spot or serpiginous focus within the hematoma, &gt; 1.5 mm, &gt; 120 HU or &ge; twice the background hemorrhage, no matching NCCT hyperdensity, not connected to a vessel.</div>
+      </div>
+      <div class="brain-item tes-elig">
+        <span class="tes-sub" style="font-weight:600;">Derivation population (flags only; the score is still shown)</span>
+        <label class="tes-check"><input type="checkbox" id="tes_ac" onchange="calcTES()"> On anticoagulation</label>
+        <label class="tes-check"><input type="checkbox" id="tes_bs" onchange="calcTES()"> Brainstem ICH</label>
+      </div>
+      <button type="button" class="brain-reset" onclick="resetTES()">Reset</button>
+    </div>
+    <div class="brain-result" aria-live="polite">
+      <div class="brain-label">Target expansion score</div>
+      <div class="brain-score"><span id="tesScore">&ndash;</span><small> / 4</small></div>
+      <div class="tes-verdict" id="tesVerdict">&ndash;</div>
+      <div class="brain-label" style="margin-top:0.6rem;">Observed expansion at this score (development cohort)</div>
+      <div class="brain-prob" id="tesRate">&ndash;</div>
+      <div class="brain-bar"><div class="brain-bar-fill" id="tesBar"></div></div>
+      <div class="brain-note" id="tesNote">Complete all three items.</div>
+    </div>
+  </div>
+  <div class="tes-flags" id="tesFlags" hidden></div>
+
+  <details class="brain-table-wrap">
+    <summary>Expansion rate and mean growth by score (Table 5 of the paper)</summary>
+    <table class="brain-table tes-table" id="tesTable">
+      <thead><tr><th rowspan="2">Score</th><th colspan="2">Development (n = 345)</th><th colspan="2">Validation (n = 147)</th></tr>
+      <tr><th>HE, n/N (%)</th><th>Mean growth</th><th>HE, n/N (%)</th><th>Mean growth</th></tr></thead>
+      <tbody>
+        <tr data-s="0"><td>0</td><td>13/132 (9.8%)</td><td>0.9 mL</td><td>3/51 (5.9%)</td><td>4.3 mL</td></tr>
+        <tr data-s="1"><td>1</td><td>21/123 (17.1%)</td><td>3.9 mL</td><td>10/55 (18.2%)</td><td>6.7 mL</td></tr>
+        <tr data-s="2"><td>2</td><td>28/58 (48.3%)</td><td>11.5 mL</td><td>12/24 (50.0%)</td><td>11.2 mL</td></tr>
+        <tr data-s="3"><td>3</td><td>17/24 (70.8%)</td><td>13.0 mL</td><td>3/6 (50.0%)</td><td>19.5 mL</td></tr>
+        <tr data-s="4"><td>4</td><td>7/8 (87.5%)</td><td>26.9 mL</td><td>8/11 (72.7%)</td><td>21.2 mL</td></tr>
+        <tr data-g="lo"><td>&lt; 2</td><td>34/255 (13.3%)</td><td>2.3 mL</td><td>13/106 (12.3%)</td><td>5.5 mL</td></tr>
+        <tr data-g="hi"><td>&ge; 2</td><td>52/90 (57.8%)</td><td>13.3 mL</td><td>23/41 (56.1%)</td><td>15.1 mL</td></tr>
+      </tbody>
+    </table>
+    <p class="tes-sub" style="margin-top:0.4rem;">Score &ge; 2: sensitivity 0.61, specificity 0.85 (development); 0.64 and 0.84 (validation). Adjusted ORs: high uHG 3.44, NCCT hypodensities 2.51, CTA spot sign 8.97.</p>
+  </details>
+
+  <div class="brain-caveats">
+    <b>Interpreting the score.</b> These are observed rates in small strata (only 8 and 11 patients scored 4), not model probabilities, and the authors describe the findings as exploratory pending external validation. Imaging was read locally rather than by a core laboratory, and the study was retrospective with split-sample internal validation only. The cohort excluded anticoagulated patients, brainstem ICH, baseline volume &ge; 100 mL and patients without baseline CTA, so the score needs a CTA. Hematoma expansion did not count IVH growth. When onset was unclear, time was taken from last seen well. Volume was measured by semiautomated planimetry; ABC/2 is an approximation. Research and education use only &mdash; not a medical device.
+  </div>
+
+  <div class="brain-ref">
+    <b>Reference</b><br>
+    Morotti A, Pensato U, Nawabi J, et al. Intracerebral hemorrhage expansion in late presenters: proposed target expansion criteria. <i>Neurology</i>. 2026;107(9):e218675. doi:<a href="https://doi.org/10.1212/WNL.0000000000218675" target="_blank" rel="noopener">10.1212/WNL.0000000000218675</a>. PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/42879724/" target="_blank" rel="noopener">42879724</a>
+  </div>
+</div>
+
 <div class="card" style="padding:0;overflow:hidden;">
   <iframe id="hesignsWebFrame" data-src="sahvai-web/hesigns.html" title="ICH expansion signs in the browser" style="width:100%;height:1800px;border:0;display:block;" loading="lazy"></iframe>
 </div>
@@ -1100,6 +1194,47 @@ function resetBRAIN() { BRAIN_IDS.forEach(id => { document.getElementById(id).va
   t.innerHTML = h + '</tbody>';
 })();
 
+// ===== TARGET EXPANSION SCORE (Morotti A, et al. Neurology 2026;107(9):e218675; PMID 42879724) =====
+// late presenters (2-12 h): high uHG (> 10 mL/h) 1, NCCT hypodensities 1, CTA spot sign 2; >= 2 = target expansion criteria
+// observed HE (> 33% and/or > 6 mL) and mean growth by score, Table 5 (development, validation)
+const TES_DEV = [[13, 132, 0.9], [21, 123, 3.9], [28, 58, 11.5], [17, 24, 13.0], [7, 8, 26.9]];
+const TES_VAL = [[3, 51, 4.3], [10, 55, 6.7], [12, 24, 11.2], [3, 6, 19.5], [8, 11, 21.2]];
+function calcTES() {
+  const $ = id => document.getElementById(id);
+  const vol = parseFloat($('tes_vol').value), t = parseFloat($('tes_time').value);
+  const hypo = $('tes_hypo').value, spot = $('tes_spot').value;
+  const uOk = isFinite(vol) && vol >= 0 && isFinite(t) && t > 0, u = uOk ? vol / t : null, uPts = uOk ? (u > 10 ? 1 : 0) : null;
+  $('tesUhg').innerHTML = uOk ? `uHG = ${vol} mL &divide; ${t} h = <b>${Math.abs(u - 10) < 0.05 ? u.toFixed(2) : u.toFixed(1)} mL/h</b> &rarr; ${uPts ? 'high (&gt; 10 mL/h): 1 point' : 'not high (&le; 10 mL/h): 0 points'}`
+    : 'uHG: enter volume and time. High uHG (&gt; 10 mL/h) scores 1.';
+  const flags = [];
+  if (isFinite(t) && t > 0 && (t < 2 || t > 12)) flags.push(`Imaging at ${t} h is outside the 2&ndash;12 h window the score was derived in${t < 2 ? ' (the authors regard unselected patients imaged within 2 h as high risk of expansion by definition)' : ''}.`);
+  if (isFinite(vol) && vol >= 100) flags.push('Baseline volume &ge; 100 mL was excluded from the derivation cohort.');
+  if ($('tes_ac').checked) flags.push('Anticoagulated patients were excluded; the score&rsquo;s performance in them is unknown.');
+  if ($('tes_bs').checked) flags.push('Brainstem ICH was excluded from the derivation cohort.');
+  const fl = $('tesFlags'); fl.hidden = !flags.length; fl.innerHTML = flags.length ? '<b>Outside the derivation population.</b> ' + flags.join(' ') : '';
+  const verdict = $('tesVerdict'), rows = document.querySelectorAll('#tesTable tbody tr');
+  const show = (score, bar, rate, note, v, met) => { $('tesScore').textContent = score; $('tesRate').textContent = rate; $('tesBar').style.width = bar; $('tesNote').innerHTML = note; verdict.textContent = v; verdict.classList.toggle('met', !!met); };
+  rows.forEach(r => r.classList.remove('hit'));
+  if (uPts == null || hypo === '' || spot === '') { show('–', '0', '–', 'Complete all three items.', '–'); return; }
+  if (spot === 'na') {
+    const sub = uPts + +hypo;
+    show(sub + '+?', '0', '–', sub >= 2
+      ? 'The NCCT items alone reach 2, so the criteria are met whatever the CTA shows. The score was derived only in patients with a baseline CTA.'
+      : `NCCT subtotal ${sub}: whether the criteria are met depends on the CTA spot sign (present adds 2). The score was derived only in patients with a baseline CTA.`,
+      sub >= 2 ? 'Meets target expansion criteria (≥ 2)' : 'Needs CTA', sub >= 2);
+    if (sub >= 2) document.querySelector('#tesTable tr[data-g="hi"]').classList.add('hit');
+    return;
+  }
+  const sc = uPts + +hypo + +spot, d = TES_DEV[sc], v = TES_VAL[sc], met = sc >= 2;
+  const pct = d[0] / d[1] * 100;
+  show(sc, pct + '%', pct.toFixed(1) + '%',
+    `${d[0]} of ${d[1]} patients with this score expanded (mean growth ${d[2].toFixed(1)} mL); validation cohort ${v[0]}/${v[1]} (${(v[0] / v[1] * 100).toFixed(1)}%, ${v[2].toFixed(1)} mL).`,
+    met ? 'Meets target expansion criteria (≥ 2)' : 'Below target expansion criteria (< 2)', met);
+  document.querySelector(`#tesTable tr[data-s="${sc}"]`).classList.add('hit');
+  document.querySelector(`#tesTable tr[data-g="${met ? 'hi' : 'lo'}"]`).classList.add('hit');
+}
+function resetTES() { ['tes_vol', 'tes_time', 'tes_hypo', 'tes_spot'].forEach(id => { document.getElementById(id).value = ''; }); ['tes_ac', 'tes_bs'].forEach(id => { document.getElementById(id).checked = false; }); calcTES(); }
+
 // ===== MODIFIED GRAEB =====
 function calcGraeb() {
   const ids = ['g_llf','g_rlf','g_llb','g_rlb','g_llt','g_rlt','g_3v','g_4v'];
@@ -1285,7 +1420,7 @@ function showTab(name) {
 // ===== TAB LINKS: open the tab named in the address (#deepbleed, #claim, …; a few friendlier names too) =====
 const TAB_HASH = { citations: 'publications', web: 'sahvai-web', web3d: 'sahvai-3d', hesigns: 'ich-expansion' };   // tab id -> address name, where friendlier
 const TAB_ALIASES = { publications: 'citations', 'sahvai-web': 'web', sahvai: 'web', brainhemoai: 'web', '3d': 'web3d', 'sahvai-3d': 'web3d', '4d': 'web3d',
-  'blast-ct': 'blast', swin: 'sahswin', 'sah-swin-unetr': 'sahswin', valladolid: 'sahswin', expansion: 'hesigns', 'ich-expansion': 'hesigns', brain: 'hesigns', 'brain-score': 'hesigns',
+  'blast-ct': 'blast', swin: 'sahswin', 'sah-swin-unetr': 'sahswin', valladolid: 'sahswin', expansion: 'hesigns', 'ich-expansion': 'hesigns', brain: 'hesigns', 'brain-score': 'hesigns', 'target-expansion': 'hesigns', tes: 'hesigns', 'late-presenters': 'hesigns',
   'heads-up': 'headsup', detector: 'headsup', dataset: 'research', 'research-dataset': 'research', data: 'research', graeb: 'ivh', anatomy: 'references', multimodal: 'mm', 'sahvai-mm': 'mm' };
 function tabFromHash() {
   let h = decodeURIComponent(location.hash.replace(/^#/, '')).trim().toLowerCase();
